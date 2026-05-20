@@ -211,12 +211,32 @@ Feature Branch
     ↓
 Pull Request
     ↓
-dev
+   dev
     ↓
-main
+   main
 ```
 ---
 
 ## License
 
-This repository is developed for academic purposes as part of the MRPL course project.
+This project is licensed under the MIT License.
+
+## References and Acknowledgements
+
+This project is developed based on the following references:
+
+### Papers
+
+1. SEPSES Cybersecurity Knowledge Graph Paper  
+https://link.springer.com/chapter/10.1007/978-3-030-30796-7_13
+
+2. Agentic Cybersecurity Knowledge Graph Related Paper  
+https://eprints.cs.univie.ac.at/8177/1/ISWC24_ICS-SEC__Andreas%20Ekelhart.pdf
+
+### Existing Repository Reference
+
+SEPSES Cyber KG Converter:
+
+https://github.com/sepses/cyber-kg-converter
+
+The original ECS-SEC KG Engine by the SEPSES team is released under the MIT License and serves as a reference for this academic project.
