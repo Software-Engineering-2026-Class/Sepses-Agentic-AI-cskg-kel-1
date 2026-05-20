@@ -159,8 +159,8 @@ This project integrates multiple cybersecurity knowledge sources:
 ### Clone Repository
 
 ```bash
-git clone https://github.com/<your-username>/mrpl-sepses-agentic-cskg.git
-cd mrpl-sepses-agentic-cskg
+git clone https://github.com/Software-Engineering-2026-Class/Sepses-Agentic-AI-ckg-kel-1.git
+cd Sepses-Agentic-AI-ckg-kel-1
 ```
 
 ### Create Virtual Environment
