@@ -47,7 +47,7 @@ https://github.com/sepses/cyber-kg-converter
 
 | Name | Role | Responsibilities |
 |------|------|------------------|
-| Widad Muhammad Rafi @OrangBiasa29 | Project Manager / PIC | Project coordination, integration, repository management |
+| Widad Muhammad Rafi - @OrangBiasa29 | Project Manager / PIC | Project coordination, integration, repository management |
 | Mikail Achmad | Evaluation System | Qlever setup, SPARQL endpoint, KG evaluation, visualization |
 | Bryan Al Hilal Siregar | Knowledge Graph Engineer | CAPEC, MITRE ATT&CK, ICSA parsing and ontology mapping |
 | Lindra Hastungkara Singgih | Data Engineer | CVE, CVSS, CWE, CPE ingestion and preprocessing |
