@@ -1,6 +1,6 @@
-# MRPL - Agentic SEPSES Cybersecurity Knowledge Graph (CKG)
+# MRPL - Agentic SEPSES Cybersecurity Knowledge Graph (CSKG)
 
-Reproducing the SEPSES Cybersecurity Knowledge Graph (CKG) Pipeline using an Agentic AI Pipeline
+Reproducing the SEPSES Cybersecurity Knowledge Graph (CSKG) Pipeline using an Agentic AI Pipeline
 
 ## Overview
 
