@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.env
+.DS_Store
+
+# Local raw datasets can be large
+data/raw/**/*.zip
+data/raw/**/*.xml
+data/raw/**/*.json
+data/raw/**/*.csv
+
+# Generated outputs
+data/processed/*
+data/rdf_output/*
+!data/processed/.gitkeep
+!data/rdf_output/.gitkeep

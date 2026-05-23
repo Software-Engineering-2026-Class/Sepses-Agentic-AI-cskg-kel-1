@@ -215,7 +215,70 @@ Pull Request
     ↓
    main
 ```
----
+
+
+## Implemetation of Knowledge Graph Engineer
+
+1. **Parsing CAPEC, MITRE ATT&CK, and ICSA**
+   - CAPEC XML
+   - MITRE ATT&CK STIX JSON, including Enterprise/ICS-style objects
+   - ICSA legacy CSV and CSAF-style JSON advisories
+
+2. **Mapping to SEPSES ontology**
+   - CAPEC entities and links to CWE/CAPEC
+   - ATT&CK techniques, tactics, mitigations, malware, software, groups, assets, campaigns, data sources/components
+   - ICSA advisories and links to CVE, CWE, vendors, products, product distributions, headquarters, and critical infrastructure sectors
+
+3. **Generating RDF/Turtle**
+   - Serializes a combined graph into `data/rdf_output/sepses_cskg.ttl`
+
+### Run the pipeline
+
+Place raw files under:
+
+```text
+data/raw/capec/
+data/raw/mitre_attack/
+data/raw/icsa/
+```
+
+Example:
+
+```bash
+python -m src.agentic_pipeline.run_pipeline   --capec data/raw/capec/capec.xml   --mitre-attack data/raw/mitre_attack/enterprise-attack.json   --icsa data/raw/icsa/icsa.csv   --output data/rdf_output/sepses_cskg.ttl
+```
+
+You may pass a file or a directory to each source argument.
+
+## Testing 
+
+```bash
+python -m pytest -q
+```
+
+### GitHub issue closure status
+
+Can be closed after review:
+
+- **#05 Implement agentic parsing and entity extraction**
+  - Implemented parser classes for CAPEC, MITRE ATT&CK, and ICSA.
+  - Extracted normalized entities and relationships.
+  - Mapped extracted entities to SEPSES classes/properties.
+
+- **#07 Generate RDF/Turtle output equivalent to SEPSES KG**
+  - Implemented RDF/Turtle serialization using `rdflib`.
+  - Output path: `data/rdf_output/sepses_cskg.ttl`.
+
+Can be partially closed or split:
+
+- **#06 Implement entity linking and relationship agent**
+  - Implemented linking for the requested sources only:
+    - CAPEC → CWE
+    - CAPEC → CAPEC
+    - ATT&CK → CAPEC
+    - ATT&CK relationship objects → SEPSES relationship predicates
+    - ICSA → CVE/CWE/vendor/product/sector resources
+  - Not full closure because full CVE/CWE/CPE/CVSS source parsing is outside this request.
 
 ## License
 
