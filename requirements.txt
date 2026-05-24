@@ -1,1 +1,66 @@
+# requirements.txt - SEPSES Agentic AI Cybersecurity KG
+# Catatan: File ini menggunakan versi umum (Python + LangChain + OpenAI).
+# Sesuaikan versi dan library sesuai kebutuhan tim.
 
+# AGENTIC AI FRAMEWORK
+# Ganti / tambah sesuai framework yang dipilih tim:
+#   - crewai          → kalau pakai CrewAI
+#   - pyautogen       → kalau pakai AutoGen (Microsoft)
+#   - langgraph       → kalau mau graph-based agent (LangChain ekosistem)
+langchain==0.3.25
+langchain-openai==0.3.16
+langchain-community==0.3.23
+langgraph==0.4.5
+
+
+# LLM PROVIDER
+# Ganti / tambah sesuai provider yang dipilih tim:
+#   - anthropic       → kalau pakai Claude (Anthropic)
+#   - ollama          → kalau mau LLM lokal (Ollama)
+#   - google-generativeai → kalau pakai Gemini
+openai==1.82.0
+
+
+# PARSING & DATA SOURCE CYBERSECURITY
+# Untuk parsing CVE, CVSS, CPE, CWE, CAPEC, MITRE ATT&CK, ICSA
+requests==2.32.3          # HTTP requests ke NVD API, MITRE, dll
+httpx==0.28.1             # Async HTTP (alternatif requests)
+beautifulsoup4==4.13.4    # Parsing HTML (kalau ada scraping)
+lxml==5.4.0               # Parser XML/HTML yang cepat
+xmltodict==0.14.2         # Konversi XML → dict (berguna untuk CVE XML feed)
+ijson==3.3.0              # Streaming JSON parser (untuk file NVD yang besar)
+stix2==3.1.0              # Parsing MITRE ATT&CK / CAPEC (format STIX)
+mitreattack-python==3.0.5 # Helper resmi untuk MITRE ATT&CK
+
+
+# RDF / KNOWLEDGE GRAPH
+# Untuk generate RDF/Turtle dan query SPARQL
+rdflib==7.1.4             # Core library RDF (buat triple, serialisasi Turtle)
+sparqlwrapper==2.0.0      # Koneksi ke SPARQL endpoint (Qlever / Virtuoso)
+
+
+# DATA PROCESSING & TRANSFORMASI
+pandas==2.2.3             # Manipulasi data tabular
+numpy==2.2.5              # Komputasi numerik
+
+
+# EVALUASI & STATISTIK KG
+# Untuk tabel, chart, diagram hasil evaluasi
+matplotlib==3.10.3        # Visualisasi chart dasar
+seaborn==0.13.2           # Chart statistik yang lebih cantik
+plotly==6.1.2             # Chart interaktif (opsional)
+tabulate==0.9.0           # Print tabel di terminal / markdown
+
+
+# UTILITAS UMUM
+python-dotenv==1.1.0      # Load API key dari file .env
+pydantic==2.11.4          # Validasi data & schema
+tqdm==4.67.1              # Progress bar (berguna saat parsing dataset besar)
+loguru==0.7.3             # Logging yang lebih readable dari logging bawaan
+tenacity==9.1.2           # Retry logic (kalau API request gagal)
+PyYAML==6.0.2             # Baca file konfigurasi .yaml
+
+
+# TESTING
+pytest==8.3.5             # Unit testing (tiap sumber data)
+pytest-asyncio==0.26.0    # Testing untuk fungsi async
