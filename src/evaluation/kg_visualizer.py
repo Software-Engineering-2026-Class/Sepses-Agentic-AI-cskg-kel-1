@@ -22,9 +22,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from src.evaluation.kg_evaluator import KGStats
 
 
-# ------------------------------------------------------------------ #
 # Konfigurasi visual
-# ------------------------------------------------------------------ #
 
 SEPSES_COLORS = {
     "primary":   "#2563EB",   # biru
@@ -59,9 +57,7 @@ def _setup_style():
     })
 
 
-# ------------------------------------------------------------------ #
 # Chart 1: Bar chart entitas per sumber data
-# ------------------------------------------------------------------ #
 
 def plot_entities_per_source(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     """
@@ -117,9 +113,7 @@ def plot_entities_per_source(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> P
     return output_path
 
 
-# ------------------------------------------------------------------ #
 # Chart 2: Pie chart distribusi sumber data
-# ------------------------------------------------------------------ #
 
 def plot_source_distribution_pie(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     """
@@ -174,9 +168,7 @@ def plot_source_distribution_pie(stats: KGStats, output_dir: Path = OUTPUT_DIR) 
     return output_path
 
 
-# ------------------------------------------------------------------ #
 # Chart 3: Grouped bar chart kualitas linking
-# ------------------------------------------------------------------ #
 
 def plot_link_quality(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     """
@@ -242,9 +234,7 @@ def plot_link_quality(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     return output_path
 
 
-# ------------------------------------------------------------------ #
 # Chart 4: Summary table sebagai gambar
-# ------------------------------------------------------------------ #
 
 def plot_summary_table(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     """
@@ -304,9 +294,7 @@ def plot_summary_table(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     return output_path
 
 
-# ------------------------------------------------------------------ #
 # Generate semua visualisasi sekaligus
-# ------------------------------------------------------------------ #
 
 def generate_all_visualizations(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> list[Path]:
     """
@@ -334,9 +322,7 @@ def generate_all_visualizations(stats: KGStats, output_dir: Path = OUTPUT_DIR) -
     return outputs
 
 
-# ------------------------------------------------------------------ #
 # Demo mode (pakai data dummy jika endpoint belum siap)
-# ------------------------------------------------------------------ #
 
 def _demo_stats() -> KGStats:
     """Buat KGStats dengan data dummy untuk keperluan testing visual."""

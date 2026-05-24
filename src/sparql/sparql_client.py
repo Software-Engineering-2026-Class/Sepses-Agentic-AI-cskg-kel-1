@@ -17,9 +17,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON, POST, TURTLE
 import requests
 
 
-# ------------------------------------------------------------------ #
 # Konstanta
-# ------------------------------------------------------------------ #
 
 DEFAULT_ENDPOINT_URL = "http://localhost:7001/sparql"
 DEFAULT_UPDATE_URL   = "http://localhost:7001/update"
@@ -41,9 +39,7 @@ PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
 """
 
 
-# ------------------------------------------------------------------ #
 # Kelas Utama
-# ------------------------------------------------------------------ #
 
 class SparqlClient:
     """
@@ -71,9 +67,7 @@ class SparqlClient:
         self._sparql.setReturnFormat(JSON)
         self._sparql.setTimeout(timeout)
 
-    # ---------------------------------------------------------------- #
     # Connectivity
-    # ---------------------------------------------------------------- #
 
     def ping(self, retries: int = 5, delay: int = 3) -> bool:
         """
@@ -109,9 +103,7 @@ class SparqlClient:
         )
         return False
 
-    # ---------------------------------------------------------------- #
     # Query
-    # ---------------------------------------------------------------- #
 
     def query(self, sparql_query: str, add_prefixes: bool = True) -> list[dict]:
         """
@@ -156,9 +148,7 @@ class SparqlClient:
             return int(result[0]["count"]["value"])
         return 0
 
-    # ---------------------------------------------------------------- #
     # Load RDF
-    # ---------------------------------------------------------------- #
 
     def load_turtle_file(
         self,
@@ -259,9 +249,7 @@ class SparqlClient:
         return hasil
 
 
-# ------------------------------------------------------------------ #
 # Entrypoint CLI
-# ------------------------------------------------------------------ #
 
 if __name__ == "__main__":
     import argparse
