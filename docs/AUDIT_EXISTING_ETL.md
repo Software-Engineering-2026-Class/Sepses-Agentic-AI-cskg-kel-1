@@ -1,12 +1,5 @@
 # Audit Report: Existing SEPSES Cyber-KG Converter ETL Pipeline
 
-**Date:** May 26, 2026  
-**Status:** Issue #01 - Completed  
-**Reference Repository:** https://github.com/sepses/cyber-kg-converter  
-**Version Audited:** 1.2.0-SNAPSHOTS  
-
----
-
 ## Executive Summary
 
 The SEPSES-CSKG Engine is a mature Java-based ETL (Extract-Transform-Load) pipeline that automatically ingests cybersecurity data from multiple publicly available sources and converts them into a unified RDF-based Knowledge Graph. The pipeline integrates 7 major data sources and uses RML (RDF Mapping Language) for data transformation, with optional SHACL validation and flexible storage backends.
@@ -22,17 +15,17 @@ The SEPSES-CSKG Engine is a mature Java-based ETL (Extract-Transform-Load) pipel
 │                    ETL Pipeline Flow                             │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  EXTRACTION           TRANSFORMATION      LINKING    STORAGE    │
-│  ┌────────────┐       ┌────────────┐    ┌────────┐ ┌────────┐  │
-│  │ Download   │──────>│ RML Mapper │───>│ Linker │→│Storage │  │
-│  │ Sources    │       │ XML/JSON   │    │        │ │Backend │  │
-│  │            │       │ to RDF     │    │        │ │        │  │
-│  └────────────┘       └────────────┘    └────────┘ └────────┘  │
-│         │                    │                │           │     │
-│         │                    │                │           │     │
-│  Input: Zip files       Transform Logic   Inverse Links  Output:│
-│  CSV, JSON, XML         RDF/Turtle        Auto-linking  RDF,   │
-│                         SHACL Validation                 Fuseki,│
+│  EXTRACTION           TRANSFORMATION      LINKING    STORAGE     │
+│  ┌────────────┐       ┌────────────┐    ┌────────┐ ┌────────┐    │
+│  │ Download   │──────>│ RML Mapper │───>│ Linker │→│Storage │    │
+│  │ Sources    │       │ XML/JSON   │    │        │ │Backend │    │
+│  │            │       │ to RDF     │    │        │ │        │    │
+│  └────────────┘       └────────────┘    └────────┘ └────────┘    │
+│         │                    │                │           │      │
+│         │                    │                │           │      │
+│  Input: Zip files       Transform Logic   Inverse Links  Output: │
+│  CSV, JSON, XML         RDF/Turtle        Auto-linking  RDF,     │
+│                         SHACL Validation                 Fuseki, │
 │                                                          Virtuoso│
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -562,39 +555,11 @@ Production systems use publicly accessible SPARQL endpoints:
 | **RML Mapping Files** | 15 |
 | **Ontology Files** | 8 |
 | **SHACL Constraint Files** | 6 |
-| **Total Code Lines (Java)** | ~5,000 |
 | **Test Cases** | 4 |
 | **Triple Store Backends** | 3 (Fuseki, Virtuoso, Dummy) |
 | **Named Graphs** | 7 |
-| **Typical KG Size** | ~20M triples |
 | **Update Frequency** | Daily (CVE), Weekly (CPE), Bi-annual (others) |
 
----
 
-## 16. Conclusion
-
-The existing SEPSES Cyber-KG Converter is a well-structured, production-grade ETL system with:
-
-✅ **Strengths:**
-- Multi-source integration with clear separation of concerns
-- Declarative RML-based transformations (easy to understand and modify)
-- Flexible storage backends
-- Built-in validation and linking mechanisms
-- Proven performance at scale (~20M triples)
-
-⚠️ **Limitations:**
-- Static configuration and sequential execution
-- Limited adaptability to source schema changes
-- Manual orchestration required
-- Basic linking without semantic similarity
-
-🎯 **Agentic Redesign Goals:**
-- Automate pipeline orchestration and optimization
-- Add dynamic schema adaptation
-- Improve entity linking with semantic techniques
-- Parallel multi-source processing
-- Self-healing error recovery
-
----
 
 **Next Steps:** Proceed to Issue #02 - Design agentic pipeline architecture.
