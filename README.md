@@ -57,7 +57,7 @@ https://github.com/sepses/cyber-kg-converter
 ## Project Structure
 
 ```txt
-mrpl-sepses-agentic-cskg/
+Sepses-Agentic-AI-cskg-kel-1/
 │
 ├── README.md
 ├── requirements.txt

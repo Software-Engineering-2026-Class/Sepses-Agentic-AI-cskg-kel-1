@@ -16,3 +16,7 @@ data/processed/*
 data/rdf_output/*
 !data/processed/.gitkeep
 !data/rdf_output/.gitkeep
+.env
+.env.*
+venv/
+env/
