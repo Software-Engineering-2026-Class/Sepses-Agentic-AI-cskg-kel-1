@@ -22,9 +22,7 @@ from src.sparql.sparql_client import SparqlClient
 from src.evaluation.kg_evaluator import KGEvaluator, KGStats
 
 
-# ------------------------------------------------------------------ #
 # Fixtures
-# ------------------------------------------------------------------ #
 
 @pytest.fixture
 def mock_client() -> SparqlClient:
@@ -60,9 +58,7 @@ def sample_stats() -> KGStats:
     )
 
 
-# ------------------------------------------------------------------ #
 # Test KGStats
-# ------------------------------------------------------------------ #
 
 class TestKGStats:
 
@@ -98,9 +94,7 @@ class TestKGStats:
         assert "cve_tanpa_cwe" in keys
 
 
-# ------------------------------------------------------------------ #
 # Test KGEvaluator (dengan mock)
-# ------------------------------------------------------------------ #
 
 class TestKGEvaluator:
 
@@ -147,9 +141,7 @@ class TestKGEvaluator:
         assert len(df) > 0
 
 
-# ------------------------------------------------------------------ #
 # Test SparqlClient
-# ------------------------------------------------------------------ #
 
 class TestSparqlClient:
 
@@ -159,7 +151,6 @@ class TestSparqlClient:
 
     def test_ping_fails_gracefully_on_no_server(self, mock_client):
         """Ping ke server yang tidak ada harus return False, bukan exception."""
-        # Tidak perlu mock — server memang tidak ada di test environment
         result = mock_client.ping(retries=1, delay=0)
         assert isinstance(result, bool)
 
@@ -182,9 +173,7 @@ class TestSparqlClient:
         assert result["gagal"] == []
 
 
-# ------------------------------------------------------------------ #
 # Test Visualizer (smoke test — pastikan tidak crash)
-# ------------------------------------------------------------------ #
 
 class TestKGVisualizer:
 

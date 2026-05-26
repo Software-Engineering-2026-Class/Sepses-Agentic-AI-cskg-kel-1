@@ -21,9 +21,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from src.sparql.sparql_client import SparqlClient
 
 
-# ------------------------------------------------------------------ #
 # Dataclass hasil evaluasi
-# ------------------------------------------------------------------ #
 
 @dataclass
 class KGStats:
@@ -31,12 +29,12 @@ class KGStats:
     Statistik lengkap Knowledge Graph SEPSES.
     Setiap atribut mewakili satu aspek yang dievaluasi.
     """
-    # --- Triple counts ---
+    # Triple counts
     total_triples: int = 0
     total_entities: int = 0
     total_relations: int = 0
 
-    # --- Per sumber data ---
+    #  Per sumber data 
     cve_count: int = 0
     cvss_count: int = 0
     cwe_count: int = 0
@@ -45,7 +43,7 @@ class KGStats:
     mitre_attack_count: int = 0
     icsa_count: int = 0
 
-    # --- Kualitas data ---
+    # Kualitas data
     cve_with_cvss: int = 0       # CVE yang punya link ke CVSS
     cve_with_cwe: int = 0        # CVE yang punya link ke CWE
     cve_with_cpe: int = 0        # CVE yang punya link ke CPE
@@ -89,9 +87,7 @@ class KGStats:
         return pd.DataFrame(data)
 
 
-# ------------------------------------------------------------------ #
 # Query definitions
-# ------------------------------------------------------------------ #
 
 # Mapping nama sumber → SPARQL query untuk menghitung entitas
 SOURCE_COUNT_QUERIES = {
@@ -132,9 +128,7 @@ LINK_QUALITY_QUERIES = {
 }
 
 
-# ------------------------------------------------------------------ #
 # Kelas utama evaluator
-# ------------------------------------------------------------------ #
 
 class KGEvaluator:
     """
@@ -152,9 +146,7 @@ class KGEvaluator:
     def __init__(self, client: SparqlClient):
         self.client = client
 
-    # ---------------------------------------------------------------- #
     # Helper
-    # ---------------------------------------------------------------- #
 
     def _run_count_query(self, query: str) -> int:
         """Jalankan query COUNT dan kembalikan hasilnya sebagai int."""
@@ -163,9 +155,7 @@ class KGEvaluator:
             return int(results[0]["n"]["value"])
         return 0
 
-    # ---------------------------------------------------------------- #
     # Evaluasi individual
-    # ---------------------------------------------------------------- #
 
     def count_total_triples(self) -> int:
         logger.info("Menghitung total triple...")
@@ -248,9 +238,7 @@ class KGEvaluator:
 
         return missing
 
-    # ---------------------------------------------------------------- #
     # Full evaluation
-    # ---------------------------------------------------------------- #
 
     def run_full_evaluation(self) -> KGStats:
         """
@@ -303,9 +291,7 @@ class KGEvaluator:
         logger.success(f"Statistik disimpan ke: {output_path}")
 
 
-# ------------------------------------------------------------------ #
 # Entrypoint CLI
-# ------------------------------------------------------------------ #
 
 if __name__ == "__main__":
     import argparse

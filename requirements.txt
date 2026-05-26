@@ -67,3 +67,5 @@ PyYAML==6.0.2             # Baca file konfigurasi .yaml
 # TESTING
 pytest==8.3.5             # Unit testing (tiap sumber data)
 pytest-asyncio==0.26.0    # Testing untuk fungsi async
+
+

@@ -16,25 +16,16 @@ from pathlib import Path
 from loguru import logger
 
 
-# ------------------------------------------------------------------ #
 # Konstanta
-# ------------------------------------------------------------------ #
 QLEVER_DOCKER_IMAGE = "docker.io/adfreiburg/qlever"
 DEFAULT_PORT = 7001
 DEFAULT_DATASET_NAME = "sepses-cskg"
 RDF_OUTPUT_DIR = Path("data/rdf_output")
 
 
-# ------------------------------------------------------------------ #
 # Install Qlever
-# ------------------------------------------------------------------ #
 
 def install_qlever_cli() -> bool:
-    """
-    Install Qlever CLI via pip.
-    Qlever CLI adalah Python package yang mengontrol Qlever via Docker.
-    Ref: https://pypi.org/project/qlever/
-    """
     logger.info("Menginstal qlever CLI via pip...")
     result = subprocess.run(
         [sys.executable, "-m", "pip", "install", "qlever", "--quiet"],
@@ -77,9 +68,7 @@ def check_qlever_installed() -> bool:
     return result.returncode == 0
 
 
-# ------------------------------------------------------------------ #
 # Buat Qleverfile
-# ------------------------------------------------------------------ #
 
 def generate_qleverfile(
     dataset_name: str = DEFAULT_DATASET_NAME,
@@ -115,8 +104,6 @@ def generate_qleverfile(
     input_files = " ".join(str(f) for f in ttl_files) if ttl_files else "data/rdf_output/*.ttl"
 
     qleverfile_content = f"""# Qleverfile untuk SEPSES Agentic CSKG
-# Di-generate otomatis oleh src/sparql/qlever_setup.py
-# Dokumentasi Qlever: https://docs.qlever.dev/quickstart
 
 [data]
 NAME              = {dataset_name}
@@ -143,9 +130,7 @@ IMAGE  = {QLEVER_DOCKER_IMAGE}
     return output_path
 
 
-# ------------------------------------------------------------------ #
 # Kontrol Endpoint (index / start / stop)
-# ------------------------------------------------------------------ #
 
 def build_index(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     """
@@ -206,9 +191,7 @@ def stop_endpoint(qleverfile_path: Path = Path("Qleverfile")) -> bool:
         return False
 
 
-# ------------------------------------------------------------------ #
 # Entrypoint
-# ------------------------------------------------------------------ #
 
 def setup_qlever(
     skip_install: bool = False,
@@ -255,9 +238,7 @@ def setup_qlever(
     )
 
 
-# ------------------------------------------------------------------ #
 # CLI
-# ------------------------------------------------------------------ #
 
 if __name__ == "__main__":
     import argparse
