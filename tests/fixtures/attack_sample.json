@@ -1,0 +1,57 @@
+{
+  "type": "bundle",
+  "objects": [
+    {
+      "type": "x-mitre-tactic",
+      "id": "x-mitre-tactic--1",
+      "name": "Initial Access",
+      "x_mitre_shortname": "initial-access",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "TA0001"
+        }
+      ]
+    },
+    {
+      "type": "attack-pattern",
+      "id": "attack-pattern--1",
+      "name": "Exploit Public-Facing Application",
+      "description": "Exploit a public service.",
+      "kill_chain_phases": [
+        {
+          "kill_chain_name": "mitre-attack",
+          "phase_name": "initial-access"
+        }
+      ],
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "T1190"
+        },
+        {
+          "source_name": "capec",
+          "external_id": "CAPEC-66"
+        }
+      ]
+    },
+    {
+      "type": "course-of-action",
+      "id": "course-of-action--1",
+      "name": "Application Isolation and Sandboxing",
+      "external_references": [
+        {
+          "source_name": "mitre-attack",
+          "external_id": "M1048"
+        }
+      ]
+    },
+    {
+      "type": "relationship",
+      "id": "relationship--1",
+      "relationship_type": "mitigates",
+      "source_ref": "course-of-action--1",
+      "target_ref": "attack-pattern--1"
+    }
+  ]
+}

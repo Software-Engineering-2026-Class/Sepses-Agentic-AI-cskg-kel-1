@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Attack_Pattern_Catalog Name="CAPEC" Version="3.9" Date="2024-01-01" xmlns="http://capec.mitre.org/capec-3">
+  <Attack_Patterns>
+    <Attack_Pattern ID="66" Name="SQL Injection" Abstraction="Standard" Structure="Simple" Status="Stable">
+      <Description>Inject SQL through untrusted input.</Description>
+      <Likelihood_Of_Attack>High</Likelihood_Of_Attack>
+      <Typical_Severity>Very High</Typical_Severity>
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="89"/>
+      </Related_Weaknesses>
+      <Related_Attack_Patterns>
+        <Related_Attack_Pattern CAPEC_ID="7" Nature="ChildOf" View_ID="1000"/>
+      </Related_Attack_Patterns>
+      <Mitigations>
+        <Mitigation>Use parameterized queries.</Mitigation>
+      </Mitigations>
+    </Attack_Pattern>
+  </Attack_Patterns>
+</Attack_Pattern_Catalog>
