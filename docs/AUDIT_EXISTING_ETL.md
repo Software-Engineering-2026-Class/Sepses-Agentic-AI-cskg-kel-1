@@ -1,565 +1,424 @@
-# Audit Report: Existing SEPSES Cyber-KG Converter ETL Pipeline
+# Audit Report: SEPSES Cyber-KG Converter ETL Pipeline
 
-## Executive Summary
-
-The SEPSES-CSKG Engine is a mature Java-based ETL (Extract-Transform-Load) pipeline that automatically ingests cybersecurity data from multiple publicly available sources and converts them into a unified RDF-based Knowledge Graph. The pipeline integrates 7 major data sources and uses RML (RDF Mapping Language) for data transformation, with optional SHACL validation and flexible storage backends.
-
----
-
-## 1. Architecture Overview
-
-### 1.1 Pipeline Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                    ETL Pipeline Flow                             │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  EXTRACTION           TRANSFORMATION      LINKING    STORAGE     │
-│  ┌────────────┐       ┌────────────┐    ┌────────┐ ┌────────┐    │
-│  │ Download   │──────>│ RML Mapper │───>│ Linker │→│Storage │    │
-│  │ Sources    │       │ XML/JSON   │    │        │ │Backend │    │
-│  │            │       │ to RDF     │    │        │ │        │    │
-│  └────────────┘       └────────────┘    └────────┘ └────────┘    │
-│         │                    │                │           │      │
-│         │                    │                │           │      │
-│  Input: Zip files       Transform Logic   Inverse Links  Output: │
-│  CSV, JSON, XML         RDF/Turtle        Auto-linking  RDF,     │
-│                         SHACL Validation                 Fuseki, │
-│                                                          Virtuoso│
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 1.2 Core Components
-
-| Component | Type | Location | Purpose |
-|-----------|------|----------|---------|
-| **MainParser** | Entry Point | `MainParser.java` | CLI orchestrator for selecting parser type |
-| **Parser Interface** | Interface | `parser/Parser.java` | Abstract contract for all parsers |
-| **Specific Parsers** | Implementation | `parser/impl/*.java` | Source-specific extraction logic |
-| **RML Files** | Transformation | `resources/rml/*.rml` | RDF Mapping Language templates |
-| **Ontology/Schema** | OWL | `resources/owl/*.ttl` | Semantic definitions and constraints |
-| **SHACL Constraints** | Validation | `resources/shacl/*.ttl` | Data quality rules |
-| **Storage Interface** | Interface | `storage/Storage.java` | Abstract storage backend |
-| **Linker** | Utility | `parser/tool/Linker.java` | Cross-source relationship builder |
+> Repo: https://github.com/sepses/cyber-kg-converter  
+> Versi engine (README): v2.1.0 | Versi artifact Maven (pom.xml): 1.2.0-SNAPSHOT  
+> Bahasa: Java 8 | Build tool: Maven
 
 ---
 
-## 2. Data Sources & Input Data
+## 1. Summary
 
-### 2.1 Supported Data Sources
+SEPSES Cyber-KG Converter adalah pipeline ETL (Extract-Transform-Load) berbasis Java yang bertugas mengambil data keamanan siber dari beberapa sumber publik, mengubahnya menjadi format RDF, lalu menyimpannya ke dalam sebuah *knowledge graph*. Pipeline ini menggunakan RML (*RDF Mapping Language*) untuk proses transformasi data, dan secara opsional bisa melakukan validasi kualitas data menggunakan SHACL.
 
-| Source | Abbreviation | Type | Format | URL | Update Frequency | Description |
-|--------|------|------|--------|-----|-------------------|-------------|
-| Common Vulnerabilities and Exposures | **CVE** | Vulnerability | JSON | https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.json.zip | Daily | Standardized vulnerability identifiers |
-| Common Vulnerability Scoring System | **CVSS** | Metric | Extracted from CVE | - | - | Vulnerability severity metrics (integrated with CVE) |
-| Common Platform Enumeration | **CPE** | Asset | XML | https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip | Weekly | Software/hardware platform identifiers |
-| Common Weakness Enumeration | **CWE** | Weakness | XML | https://cwe.mitre.org/data/xml/cwec_latest.xml.zip | Bi-annually | Software weakness definitions |
-| Common Attack Pattern Enumeration and Classification | **CAPEC** | Attack Pattern | XML | https://capec.mitre.org/data/archive/capec_latest.zip | Bi-annually | Attack pattern framework |
-| MITRE ATT&CK Enterprise | **CAT (Enterprise)** | Threat | JSON | https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json | Quarterly | Enterprise threat framework |
-| MITRE ATT&CK ICS | **CAT (ICS)** | Threat | JSON | https://raw.githubusercontent.com/mitre/cti/master/ics-attack/ics-attack.json | Quarterly | Industrial Control System threats |
-| ICSA Advisory | **ICSA** | Advisory | CSV | https://raw.githubusercontent.com/icsadvprj/ICS-Advisory-Project/main/ICS-CERT_ADV/CISA_ICS_ADV_Master.csv | Ad-hoc | ICS-specific security advisories |
-
-### 2.2 Download & Extraction Process
-
-**Location:** `helper/DownloadUnzip.java`
-
-- Downloads zip files from configured URLs
-- Validates checksums (where available)
-- Extracts to local input directory: `input/<source>/`
-- Handles incremental CVE updates (yearly slicing)
-- CVE special handling: Downloads specific year ranges (e.g., 2024-2024) + modified updates
-
-### 2.3 Data Ingestion Configuration
-
-**File:** `config.properties`
+Alur besar pipeline-nya seperti ini:
 
 ```
-CVEActive=Yes
-CVEUrl=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.json.zip
-CVEYearStart=2024
-CVEYearEnd=2024
+Unduh Data → Ekstrak File → Transformasi ke RDF → Validasi (opsional) → Simpan ke File → Upload ke Triplestore
+```
 
-CPEActive=Yes
-CPEUrl=https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip
+---
 
-CWEActive=Yes
-CWEUrl=https://cwe.mitre.org/data/xml/cwec_latest.xml.zip
+## 2. Sumber Data
 
-CAPECActive=Yes
-CAPECUrl=https://capec.mitre.org/data/archive/capec_latest.zip
+Pipeline ini mendukung 7 sumber data. Masing-masing bisa diaktifkan atau dinonaktifkan lewat `config.properties`.
 
+| Sumber | Kode | Format | URL Unduhan |
+|--------|------|--------|-------------|
+| Common Vulnerabilities and Exposures | CVE | JSON (.zip) | `https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.json.zip` |
+| Common Vulnerability Scoring System | CVSS | — | Terintegrasi di dalam data CVE, tidak diunduh terpisah |
+| Common Platform Enumeration | CPE | XML (.zip) | `https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip` |
+| Common Weakness Enumeration | CWE | XML (.zip) | `https://cwe.mitre.org/data/xml/cwec_latest.xml.zip` |
+| Common Attack Pattern Enumeration and Classification | CAPEC | XML (.zip) | `https://capec.mitre.org/data/archive/capec_latest.zip` |
+| MITRE ATT&CK | CAT | JSON (langsung) | `https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json` |
+| ICS Advisory (CISA) | ICSA | CSV (langsung) | `https://raw.githubusercontent.com/icsadvprj/ICS-Advisory-Project/main/ICS-CERT_ADV/CISA_ICS_ADV_Master.csv` |
+
+**Catatan penting:**
+- MITRE ATT&CK Enterprise dan ICS sama-sama tersedia di config, tapi keduanya menggunakan satu konfigurasi `CATUrl` yang sama. Untuk beralih ke dataset ICS, URL-nya perlu diganti secara manual di `config.properties`. Keduanya tidak bisa aktif bersamaan dalam satu konfigurasi.
+- CVE feed yang digunakan masih menggunakan NVD API v1.1, yang sudah dinyatakan **deprecated** oleh NIST sejak 2023 dan digantikan oleh NVD API 2.0. Ini merupakan risiko nyata yang perlu ditangani.
+
+---
+
+## 3. Konfigurasi (`config.properties`)
+
+Semua konfigurasi pipeline ada di satu file `config.properties` di root project. Berikut isi lengkapnya:
+
+```properties
+# Direktori kerja
+InputDir=input
+OutputDir=output
+
+# Triplestore (pilih: fuseki / virtuoso / dummy)
+SparqlEndpoint=http://localhost:8890/sparql
+Triplestore=dummy
+UseAuth=true
+EndpointUser=dba
+EndpointPass=dba
+
+# MITRE ATT&CK (Enterprise aktif, ICS dikomentari)
 CATActive=Yes
 CATUrl=https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json
+#CATUrl=https://raw.githubusercontent.com/mitre/cti/master/ics-attack/ics-attack.json
+CATRMLFile=rml/cat-json.rml
+CATRMLTempFile=rml/cat-json-temp.rml
+CATNamegraph=http://w3id.org/sepses/graph/attack
 
+# ICSA
 ICSAActive=Yes
 ICSAUrl=https://raw.githubusercontent.com/icsadvprj/ICS-Advisory-Project/main/ICS-CERT_ADV/CISA_ICS_ADV_Master.csv
+ICSARMLFile=rml/icsa-csv.rml
+ICSARMLTempFile=rml/icsa-csv-temp.rml
+ICSANamegraph=http://w3id.org/sepses/graph/icsa
+
+# CAPEC
+CAPECActive=Yes
+CAPECUrl=https://capec.mitre.org/data/archive/capec_latest.zip
+CAPECRMLFile=rml/capec-xml.rml
+CAPECRMLTempFile=rml/capec-xml-temp.rml
+CAPECNamegraph=http://w3id.org/sepses/graph/capec
+
+# CWE
+CWEActive=Yes
+CWEUrl=https://cwe.mitre.org/data/xml/cwec_latest.xml.zip
+CWERMLFile=rml/cwe-xml.rml
+CWERMLTempFile=rml/cwe-xml-temp.rml
+CWENamegraph=http://w3id.org/sepses/graph/cwe
+
+# CVE
+CVEActive=Yes
+CVEUrl=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.json.zip
+CVEMetaUrl=https://nvd.nist.gov/feeds/json/cve/1.1/nvdcve-1.1-modified.meta
+CVEYearStart=2024
+CVEYearEnd=2024
+CVERMLFile=rml/cve-json.rml
+CVERMLTempFile=rml/cve-json-temp.rml
+CVENamegraph=http://w3id.org/sepses/graph/cve
+
+# CPE
+CPEActive=Yes
+CPEUrl=https://nvd.nist.gov/feeds/xml/cpe/dictionary/official-cpe-dictionary_v2.3.xml.zip
+CPERMLFile=rml/cpe-xml-mini.rml
+CPERMLTempFile=rml/cpe-xml-temp.rml
+CPENamegraph=http://w3id.org/sepses/graph/cpe
 ```
 
 ---
 
-## 3. Transformation Pipeline
+## 4. Struktur Kode
 
-### 3.1 RML-Based Transformation
+```
+src/main/java/.../sepses/
+│
+├── MainParser.java                  ← titik masuk (CLI)
+│
+├── parser/
+│   ├── Parser.java                  ← interface umum semua parser
+│   └── impl/
+│       ├── CVEParser.java           ← (legacy, tidak dipakai di MainParser)
+│       ├── CVEParserJson.java       ← parser CVE aktif saat ini
+│       ├── CPEParser.java
+│       ├── CWEParser.java
+│       ├── CAPECParser.java
+│       ├── CATParser.java           ← MITRE ATT&CK
+│       ├── ICSAParser.java          ← ICSA dari CSV
+│       └── ICSAParserJson.java      ← (versi JSON alternatif, tidak dipakai di MainParser)
+│
+├── parser/tool/
+│   ├── Linker.java                  ← membuat relasi antar sumber
+│   ├── CVETool.java
+│   ├── CATTool.java
+│   ├── CPETool.java
+│   └── ICSATool.java
+│
+├── helper/
+│   ├── DownloadUnzip.java           ← unduh dan ekstrak file
+│   ├── XMLParser.java               ← parsing XML → RDF via RML
+│   ├── JSONParser.java              ← parsing JSON → RDF via RML
+│   ├── CSVParser.java               ← parsing CSV → RDF via RML
+│   ├── Utility.java                 ← SHACL validasi, storage factory, utilitas umum
+│   └── Statistics.java
+│
+├── storage/
+│   ├── Storage.java                 ← interface storage
+│   └── impl/
+│       ├── FusekiStorage.java
+│       ├── VirtuosoStorage.java
+│       └── DummyStorage.java
+│
+└── vocab/
+    ├── CVE.java, CPE.java, CWE.java, CAPEC.java
+    ├── CVSS.java, CAT.java, ICSA.java
+```
 
-**Technology:** Apache Jena + RML (RDF Mapping Language)  
-**Location:** `src/main/resources/rml/`
+---
 
-RML files define declarative mappings from source formats to RDF triples:
+## 5. Tahapan ETL Pipeline
 
-#### Example: CVE JSON to RDF (cve-json.rml)
+Setiap sumber data dijalankan secara terpisah lewat command line. Alur eksekusi untuk setiap sumber mengikuti pola yang sama, dengan sedikit variasi khusus untuk CVE.
 
-```rml
-@prefix rr: <http://www.w3.org/ns/r2rml#> .
-@prefix rml: <http://semweb.mmlab.be/ns/rml#> .
-@prefix ql: <http://semweb.mmlab.be/ns/ql#> .
-@prefix cve: <http://w3id.org/sepses/vocab/ref/cve#> .
+### 5.1 Cara Menjalankan
 
+```bash
+# Build project
+mvn clean install -DskipTests=true
+
+# Jalankan parser untuk sumber tertentu
+java -jar target/cyber-kg-converter-1.2.0-SNAPSHOT-jar-with-dependencies.jar -p <sumber> [-v]
+
+# <sumber> bisa: cve, cpe, cwe, capec, cat, icsa
+# -v untuk mengaktifkan validasi SHACL (opsional)
+```
+
+### 5.2 Alur Per Sumber Data
+
+**Tahap 1 — Unduh Data**
+
+Kelas `DownloadUnzip.java` mengunduh file dari URL yang ada di config menggunakan Java NIO. Hasilnya disimpan di `input/<sumber>/`. Untuk sumber yang berupa file `.zip` (CVE, CPE, CWE, CAPEC), file kemudian diekstrak di tempat yang sama. Untuk CAT dan ICSA, file langsung diunduh tanpa proses unzip karena memang bukan format zip.
+
+**Tahap 2 — Cek Pembaruan (khusus beberapa sumber)**
+
+Sebelum proses transformasi, beberapa parser memeriksa apakah data di triplestore sudah terbaru atau belum. Mekanismenya berbeda per sumber:
+- **CAPEC & CWE:** Membandingkan catalog ID dari file baru dengan yang sudah ada di triplestore via SPARQL query.
+- **CVE:** Membaca file `.meta` dari NVD yang berisi hash SHA-256, lalu dibandingkan dengan metadata yang tersimpan. Jika hash sama, proses dihentikan (tidak perlu update).
+
+**Tahap 3 — Transformasi ke RDF (via RML)**
+
+Ini adalah inti dari pipeline. File data (XML/JSON/CSV) diubah menjadi RDF triple menggunakan file mapping RML. Library yang dipakai adalah **CARML v0.3.2** di atas **Apache Jena v3.9.0**.
+
+Setiap sumber punya dua file RML:
+- `*-main.rml` — untuk proses load penuh
+- `*-temp.rml` — untuk cek metadata / incremental update
+
+| Sumber | File RML | Format Input |
+|--------|----------|--------------|
+| CVE | `cve-json.rml` | JSON |
+| CPE | `cpe-xml-mini.rml` | XML |
+| CWE | `cwe-xml.rml` | XML |
+| CAPEC | `capec-xml.rml` | XML |
+| ATT&CK | `cat-json.rml` | JSON |
+| ICSA | `icsa-csv.rml` | CSV |
+
+Contoh potongan RML untuk CVE — menjelaskan bagaimana setiap entri CVE dari JSON dipetakan menjadi RDF triple:
+
+```turtle
 <#SubjectMapping> a rr:TriplesMap ;
   rml:logicalSource [
     rml:source [ a carml:Stream ] ;
     rml:referenceFormulation ql:JSONPath ;
     rml:iterator "$.CVE_Items[*]" ;
   ] ;
-  
   rr:subjectMap [
     rr:template "http://w3id.org/sepses/resource/cve/{cve.CVE_data_meta.ID}" ;
   ] ;
-  
   rr:predicateObjectMap [
-    rr:predicate rdf:type ;
-    rr:objectMap [ rr:template "http://w3id.org/sepses/vocab/ref/cve#CVE" ] ;
+    rr:predicate dcterm:identifier ;
+    rr:objectMap [ rml:reference "cve.CVE_data_meta.ID" ] ;
   ] ;
 ```
 
-#### RML File Mappings
+**Tahap 4 — Linking (membuat relasi antar entitas)**
 
-| Source | RML File | Format | Mapping Strategy |
-|--------|----------|--------|------------------|
-| CVE | `cve-json.rml` | JSON | JSONPath iterator over CVE_Items array |
-| CVE (temp) | `cve-json-temp.rml` | JSON | Specialized for modified updates |
-| CPE | `cpe-xml-mini.rml` | XML | XPath extraction with filtering |
-| CPE (full) | `cpe-xml.rml` | XML | Complete CPE dictionary mapping |
-| CWE | `cwe-xml.rml` | XML | XPath iteration over CWE entries |
-| CAPEC | `capec-xml.rml` | XML | XPath for attack pattern hierarchy |
-| MITRE ATT&CK | `cat-json.rml` | JSON | JSONPath for tactics/techniques |
-| ICSA | `icsa-csv.rml` | CSV | CSV row iterator |
+Setelah RDF terbentuk, kelas `Linker.java` dan masing-masing `*Tool.java` menjalankan SPARQL UPDATE untuk membuat relasi balik (*inverse properties*) antar entitas. Prinsipnya sederhana: properti searah diubah menjadi properti dua arah.
 
-### 3.2 Transformation Features
-
-- **Multi-format support:** XML, JSON, CSV
-- **Complex object handling:** Nested structures flattened to triples
-- **Data type mapping:** Automatic XSD type inference
-- **Reference resolution:** Cross-document linking during transformation
-- **Function support:** GREL expressions for string manipulation
-
----
-
-## 4. Schema & Ontology
-
-### 4.1 SEPSES Integrated Vocabulary
-
-**Location:** `src/main/resources/owl/`
-
-#### Core Namespaces
-
-| Prefix | Namespace | Description |
-|--------|-----------|-------------|
-| `cve` | `http://w3id.org/sepses/vocab/ref/cve#` | CVE vocabulary |
-| `cwe` | `http://w3id.org/sepses/vocab/ref/cwe#` | CWE vocabulary |
-| `capec` | `http://w3id.org/sepses/vocab/ref/capec#` | CAPEC vocabulary |
-| `cpe` | `http://w3id.org/sepses/vocab/ref/cpe#` | CPE vocabulary |
-| `cvss` | `http://w3id.org/sepses/vocab/ref/cvss#` | CVSS vocabulary |
-| `attack` | `http://w3id.org/sepses/vocab/ref/attack#` | MITRE ATT&CK vocabulary |
-| `icsa` | `http://w3id.org/sepses/vocab/ref/icsa#` | ICSA vocabulary |
-| `integrated` | `http://w3id.org/sepses/vocab/integrated#` | Cross-source linking ontology |
-
-#### Key Ontology Files
-
-| File | Purpose | Key Classes |
-|------|---------|-------------|
-| **integrated.ttl** | Cross-source relationships | Object properties linking CVE↔CPE, CVE↔CWE, CAPEC↔CWE |
-| **CVE.ttl** | CVE semantics | CVE, CVEData, CVEDescription, CVSS |
-| **CPE.ttl** | CPE semantics | CPE, Product, Vendor, LogicalTest |
-| **CWE.ttl** | CWE semantics | CWE, Weakness, ModeOfIntroduction |
-| **CAPEC.ttl** | CAPEC semantics | CAPEC, AttackPattern, Consequence |
-| **CVSS.ttl** | CVSS metrics | CVSS, CVSSv3, CVSSv2, Score |
-| **ATTACK.ttl** | ATT&CK semantics | Tactic, Technique, SubTechnique |
-| **ICSA.ttl** | ICSA semantics | Advisory, AffectedProduct |
-
-### 4.2 Core Object Properties (Sample)
-
-```turtle
-cve:hasCPE 
-  rdfs:domain cve:CVE ;
-  rdfs:range cpe:CPE ;
-  rdfs:label "hasCPE" .
-
-cve:hasCWE
-  rdfs:domain cve:CVE ;
-  rdfs:range cwe:CWE ;
-  rdfs:label "hasCWE" .
-
-capec:hasRelatedWeakness
-  rdfs:domain capec:CAPEC ;
-  rdfs:range cwe:CWE ;
-  rdfs:label "hasRelatedWeakness" .
+Contoh yang dilakukan `Linker.updateCveLinks()`:
+```
+CVE hasCPE CPE  →  CPE isCpeOf CVE
+CVE hasVulnerableConfiguration X  →  X isVulnerableConfigurationOf CVE
 ```
 
-### 4.3 Vocabulary Links
+Untuk ICSA, `ICSATool.java` secara khusus membuat koneksi ke entitas CVE, CWE, vendor, produk, dan infrastruktur kritis yang direferensikan dalam data advisory.
 
-- **CVE.ttl:** http://w3id.org/sepses/vocab/ref/cve
-- **CWE.ttl:** http://w3id.org/sepses/vocab/ref/cwe
-- **CPE.ttl:** http://w3id.org/sepses/vocab/ref/cpe
-- **CAPEC.ttl:** http://w3id.org/sepses/vocab/ref/capec
-- **CVSS.ttl:** http://w3id.org/sepses/vocab/ref/cvss
-- **Integrated.ttl:** http://w3id.org/sepses/vocab/integrated
+**Tahap 5 — Validasi SHACL (opsional)**
 
----
+Jika flag `-v` diaktifkan, model RDF yang sudah terbentuk divalidasi menggunakan file SHACL constraint. Library yang digunakan adalah **TopBraid SHACL v1.1.0**.
 
-## 5. Linking & Data Integration
+| File SHACL | Memvalidasi |
+|------------|-------------|
+| `shacl/cve.ttl` | CVE — wajib punya `identifier`, `description`, `issued` |
+| `shacl/cpe.ttl` | CPE |
+| `shacl/cwe.ttl` | CWE |
+| `shacl/capec.ttl` | CAPEC |
+| `shacl/cat.ttl` | MITRE ATT&CK |
+| `shacl/icsa.ttl` | ICSA |
 
-### 5.1 Inter-Source Linking Mechanism
+Jika validasi gagal, pipeline langsung berhenti dan melempar `IOException`. Tidak ada mekanisme recovery otomatis.
 
-**Location:** `parser/tool/Linker.java`
+**Catatan:** Ada ketidakkonsistenan kecil di kode — `CVEParserJson.java` memanggil `shacl/cve_json.ttl`, padahal file yang ada di repo adalah `shacl/cve.ttl`. Ini bisa menyebabkan error saat validasi CVE diaktifkan.
 
-The Linker utility creates inverse relationships between source entities using SPARQL UPDATE queries:
+**Tahap 6 — Simpan ke File**
 
-#### CVE Linking Strategy
+Model RDF yang sudah jadi disimpan ke disk dalam format **Turtle (.ttl)** di direktori `output/<sumber>/`. Nama file mengikuti nama file sumber yang diunduh dengan tambahan suffix `-output.ttl`.
 
-```java
-updateCveLinks(Model cveModel) {
-  // Maps forward properties to inverse properties
-  Property isCpeOf = CVE.NS + "isCpeOf"        // Inverse of hasCPE
-  Property isVulnerableConfigurationOf = CPE.NS + "isVulnerableConfigurationOf"
-  
-  // Executes SPARQL UPDATE:
-  // DELETE { ?a hasCPE ?b } 
-  // INSERT { ?b isCpeOf ?a } 
-  // WHERE { ?a hasCPE ?b }
-}
-```
+**Tahap 7 — Upload ke Triplestore**
 
-#### CWE Linking Strategy
+File Turtle di-upload ke triplestore via HTTP ke SPARQL endpoint yang dikonfigurasi. Ada tiga pilihan backend:
 
-```
-hasModificationHistory ↔ isModificationHistoryOf
-hasSubmissionHistory ↔ isSubmissionHistoryOf
-hasModeOfIntroduction ↔ isModeOfIntroductionOf
-hasDetectionMethod ↔ isDetectionMethodOf
-hasPotentialMitigation ↔ isPotentialMitigationOf
-hasCommonConsequence ↔ isCommonConsequenceOf
-hasRelatedWeakness ↔ isRelatedWeaknessOf
-```
+| Backend | Keterangan |
+|---------|------------|
+| `fuseki` | Apache Jena Fuseki — cocok untuk development/lokal |
+| `virtuoso` | OpenLink Virtuoso — untuk deployment produksi berskala besar |
+| `dummy` | Tidak ada penyimpanan, hanya untuk testing |
 
-#### CAPEC Linking Strategy
+Setiap sumber disimpan dalam **named graph** terpisah (misalnya `http://w3id.org/sepses/graph/cve`), sehingga data antar sumber tidak saling bercampur di triplestore.
+
+### 5.3 Alur Khusus CVE (Incremental Update)
+
+CVE memiliki alur yang sedikit berbeda karena datanya sangat besar dan sering diperbarui:
 
 ```
-hasModificationHistory ↔ isModificationHistoryOf
-hasSubmissionHistory ↔ isSubmissionHistoryOf
-hasSkillRequired ↔ isSkillRequiredFor
-hasRelatedAttackPattern ↔ isRelatedAttackPatternOf
-hasConsequence ↔ isConsequenceOf
-hasExecutionFlow ↔ isExecutionFlowOf
-```
-
-### 5.2 Cross-Source Integration
-
-**Implicit linking during transformation:**
-
-1. **CVE → CWE:** CVE RML references CWE identifiers, creating implicit links
-2. **CVE → CPE:** CVE includes CPE URIs in vulnerable configurations
-3. **CWE ↔ CAPEC:** Manual linking via shared concept hierarchies
-4. **MITRE ATT&CK ↔ CVE/CWE:** Relationship files in MITRE data
-
----
-
-## 6. Validation & Quality Assurance
-
-### 6.1 SHACL Constraints
-
-**Location:** `src/main/resources/shacl/`
-
-Optional SHACL-based validation activated with `-v` flag:
-
-| Constraint File | Purpose | Validates |
-|-----------------|---------|-----------|
-| **cve.ttl** | CVE validity | CVE properties, required fields |
-| **cpe.ttl** | CPE validity | CPE structure, product consistency |
-| **cwe.ttl** | CWE validity | CWE hierarchies, property ranges |
-| **capec.ttl** | CAPEC validity | Attack pattern structure |
-| **cat.ttl** | ATT&CK validity | Tactic/technique relationships |
-| **icsa.ttl** | ICSA validity | Advisory format compliance |
-
-### 6.2 Test Suite
-
-**Location:** `src/test/java/`
-
-- `TestCAPECParser.java` - CAPEC extraction validation
-- `TestCPEParser.java` - CPE extraction validation
-- `TestCVEParser.java` - CVE extraction validation
-- `TestCWEParser.java` - CWE extraction validation
-
-Tests verify:
-- Correct RDF triple generation
-- Expected class instantiation
-- Property cardinality
-- SHACL constraint compliance
-
----
-
-## 7. Storage & Persistence
-
-### 7.1 Storage Backends
-
-**Location:** `storage/impl/`
-
-| Backend | Type | Connection | Use Case |
-|---------|------|-----------|----------|
-| **Fuseki** | SPARQL Endpoint | HTTP POST to Jena Fuseki | Development, local testing |
-| **Virtuoso** | SPARQL Endpoint | HTTP POST to OpenLink Virtuoso | Production, high-scale deployment |
-| **Dummy** | In-Memory | None | Testing, validation only |
-
-### 7.2 Storage Configuration
-
-```properties
-# Storage type selection
-Triplestore=dummy  # or "fuseki" or "virtuoso"
-
-# Endpoint configuration
-SparqlEndpoint=http://localhost:8890/sparql
-
-# Authentication (optional)
-UseAuth=true
-EndpointUser=dba
-EndpointPass=dba
-```
-
-### 7.3 Data Persistence Strategy
-
-1. **RDF Model Creation:** In-memory Apache Jena Model
-2. **Serialization:** Turtle format to disk (`output/<source>/`)
-3. **SPARQL Load:** Upload RDF files to triple store
-4. **Graph Management:** Named graphs per source
-
----
-
-## 8. Execution Pipeline
-
-### 8.1 Single-Source Execution
-
-```bash
-# Build
-mvn clean install -DskipTests=true
-
-# Run specific parser
-java -jar target/cyber-kb-1.2.0-SNAPSHOTS-jar-with-dependencies.jar -p <source> [-v]
-
-# Where <source> can be: cpe, cve, cwe, capec, cat, icsa
-```
-
-### 8.2 Execution Flow (Per Parser)
-
-```
-MainParser.main()
-  ↓
-loadConfig(config.properties)
-  ↓
-selectParser(param)
-  ↓
-parser.parse(isShaclActive)
-  ├─ getModelFromLastUpdate()
-  │   ├─ downloadData()
-  │   ├─ extractZip()
-  │   └─ applyRML()
-  ├─ [OPTIONAL] shaclValidate()
-  ├─ linker.updateLinks()  [if applicable]
-  ├─ saveModelToFile()
-  └─ storeFileInRepo()
-  ↓
-logExecutionTime()
-```
-
-### 8.3 Incremental Update Strategy
-
-For CVE sources with year-based bucketing:
-
-1. Check if initial load exists in triplestore
-2. If not: Load 2024 data (configured year range)
-3. Always: Load "modified" data (recent changes)
-4. Merge updates into existing graph
-
----
-
-## 9. Performance Characteristics
-
-### 9.1 Benchmark Results
-
-**Test Environment:** macOS Intel i7@3.1GHz, 16GB RAM
-
-| Source | Size | Duration | Output Triples | Triplestore |
-|--------|------|----------|-----------------|------------|
-| CVE | ~20 GB (full) | ~45 min | ~15M | Virtuoso |
-| CPE | ~500 MB | ~30 min | ~5M | Virtuoso |
-| CWE | ~100 MB | ~10 min | ~800K | Virtuoso |
-| CAPEC | ~50 MB | ~5 min | ~200K | Virtuoso |
-| CAT | ~50 MB | ~3 min | ~300K | Virtuoso |
-| ICSA | ~5 MB | <1 min | ~50K | Virtuoso |
-
-**Note:** SHACL validation adds 30-50% overhead, especially for large sources.
-
-
-```
-
-### Stage 7: Triple Store Upload
-
-```
-Input: Turtle RDF file
-├─ Source URI
-├─ Endpoint configuration
-└─ Credentials (if needed)
-
-Process:
-├─ HTTP POST to SPARQL endpoint
-├─ Load RDF into named graph
-└─ Index for querying
-
-Output: Data in Triple Store
-└─ Queryable via SPARQL
+[Cek apakah graph CVE sudah ada di triplestore?]
+        |                        |
+       YA                      TIDAK
+        |                        |
+        |               [Load data per tahun]
+        |               (sesuai CVEYearStart-CVEYearEnd)
+        |                        |
+        └──────────┬─────────────┘
+                   ↓
+        [Load data "modified" (update terbaru)]
+        [Cek hash SHA-256 dari file .meta]
+        [Jika hash sama → skip, tidak ada yang berubah]
+        [Jika hash berbeda → proses update]
 ```
 
 ---
 
-## 11. Current Limitations & Gaps
+## 6. Skema dan Ontologi
 
-### 11.1 Static Configuration
+### 6.1 Vocabulary yang Digunakan
 
-- **Issue:** Pipeline parameters hardcoded in config.properties
-- **Impact:** Cannot dynamically adjust extraction rules based on data characteristics
-- **Candidate for Agentic Redesign:** Agent could decide which sources to fetch based on data freshness
+Semua file ontologi ada di `src/main/resources/owl/`. Masing-masing sumber data punya vocabulary-nya sendiri.
 
-### 11.2 Sequential Execution
+| File | Namespace | Kelas Utama |
+|------|-----------|-------------|
+| `CVE.ttl` | `http://w3id.org/sepses/vocab/ref/cve#` | `CVE`, `Reference`, `LogicalTest` |
+| `CVSS.ttl` | `http://w3id.org/sepses/vocab/ref/cvss#` | `CVSS3BaseMetric`, `CVSS2BaseMetric` |
+| `CPE.ttl` | `http://w3id.org/sepses/vocab/ref/cpe#` | `CPE`, `Product`, `Vendor` |
+| `CWE.ttl` | `http://w3id.org/sepses/vocab/ref/cwe#` | `CWE`, `Weakness` |
+| `CAPEC.ttl` | `http://w3id.org/sepses/vocab/ref/capec#` | `CAPEC`, `AttackPattern`, `Consequence` |
+| `ATTACK.ttl` | `http://w3id.org/sepses/vocab/ref/attack#` | `AttackPattern` (Tactic/Technique) |
+| `ICSA.ttl` | `http://w3id.org/sepses/vocab/ref/icsa#` | `ICSA` (Advisory) |
+| `integrated.ttl` | `http://w3id.org/sepses/vocab/integrated#` | Properti lintas sumber |
 
-- **Issue:** Sources processed one-at-a-time, CLI interface limits automation
-- **Impact:** No parallel processing, long total execution time (~2-3 hours for full KG)
-- **Candidate for Agentic Redesign:** Agent orchestrator could parallelize source extraction
+### 6.2 Relasi Antar Sumber (dari `integrated.ttl`)
 
-### 11.3 Limited Data Quality Feedback
-
-- **Issue:** SHACL validation is binary (pass/fail), no adaptive recovery
-- **Impact:** Errors halt entire pipeline
-- **Candidate for Agentic Redesign:** Agent could retry with alternative parsers or data cleaning
-
-### 11.4 Brittle RML Mappings
-
-- **Issue:** RML files hardcoded for specific data schema versions
-- **Impact:** Schema changes in upstream sources break parser
-- **Candidate for Agentic Redesign:** Agent could detect schema changes and regenerate RML mappings
-
-### 11.5 No Entity Resolution Beyond URI Matching
-
-- **Issue:** Linking relies on exact URI matches; no fuzzy matching or similarity detection
-- **Impact:** Missing cross-source links when identifiers differ slightly
-- **Candidate for Agentic Redesign:** Agent could perform semantic similarity matching
-
-### 11.6 Manual Orchestration
-
-- **Issue:** No built-in scheduler; requires external cron/bash scripts
-- **Impact:** Maintenance overhead, difficult to integrate with CI/CD
-- **Candidate for Agentic Redesign:** Agent could self-schedule based on source update patterns
-
----
-
-## 12. Key Code Artifacts
-
-### 12.1 Entry Points
-
-- [MainParser.java](../cyber-kg-converter/src/main/java/ac/at/tuwien/ifs/sepses/MainParser.java) - CLI entry point
-- [Parser.java](../cyber-kg-converter/src/main/java/ac/at/tuwien/ifs/sepses/parser/Parser.java) - Parser interface
-
-### 12.2 Parser Implementations
+File `integrated.ttl` mendefinisikan properti yang menghubungkan entitas dari sumber berbeda:
 
 ```
-├── CAPECParser.java      - Extracts attack patterns from XML
-├── CATParser.java        - Extracts MITRE ATT&CK from JSON
-├── CPEParser.java        - Extracts platforms from XML
-├── CVEParserJson.java    - Extracts vulnerabilities from JSON
-├── CWEParser.java        - Extracts weaknesses from XML
-└── ICSAParser.java       - Extracts ICS advisories from CSV
+CVE  ──hasCPE──►  CPE
+CVE  ──hasCWE──►  CWE
+CAPEC ──hasRelatedWeakness──►  CWE
+CAPEC ──hasRelatedAttackPattern──►  CAPEC (relasi hierarki)
+ICSA  ──(via ICSATool)──►  CVE, CWE, Vendor, Product
 ```
 
-### 12.3 Utilities
+### 6.3 Contoh URI Resource
 
-- **Linker.java** - Creates cross-source relationships
-- **DownloadUnzip.java** - Fetches and extracts source data
-- **Utility.java** - Storage factory and graph utilities
-- **JSONParser.java** - JSON-specific parsing logic
-- **CVETool.java** - CVE-specific transformations
+Setiap entitas di knowledge graph punya URI yang unik dan bisa diakses:
 
----
-
-## 13. Integration with Existing Systems
-
-### 13.1 SPARQL Endpoints
-
-Production systems use publicly accessible SPARQL endpoints:
-
-- **SEPSES SPARQL:** https://w3id.org/sepses/sparql
-- **LDF Server:** http://ldf-server.sepses.ifs.tuwien.ac.at/
-- **RDF Dumps:** https://sepses.ifs.tuwien.ac.at/index.php/datasets/
-
-### 13.2 Linked Data Interface
-
-- **Example Resource:** https://sepses.ifs.tuwien.ac.at/resource/cve/CVE-2018-4449
-- Provides HTML and RDF views of entities
-
-### 13.3 External Query Tools
-
-- SPARQL query testing
-- SHACL validation tools
-- RDF visualization
+```
+CVE:   http://w3id.org/sepses/resource/cve/CVE-2021-44228
+CPE:   http://w3id.org/sepses/resource/cpe/...
+CWE:   http://w3id.org/sepses/resource/cwe/CWE-79
+CAPEC: http://w3id.org/sepses/resource/capec/CAPEC-66
+```
 
 ---
 
-## 14. Recommendations for Agentic Redesign
+## 7. Library dan Dependensi Utama
 
-### 14.1 Opportunities for AI-Driven Automation
-
-1. **Dynamic Parser Selection:** Agent learns which parsers work for which data
-2. **Adaptive Schema Mapping:** Agent detects schema changes and generates new RML
-3. **Intelligent Linking:** Agent performs semantic similarity matching beyond URI matching
-4. **Parallel Orchestration:** Agent coordinates multi-source concurrent extraction
-5. **Error Recovery:** Agent retries with alternative strategies on failure
-6. **Quality Monitoring:** Agent detects data anomalies and flags quality issues
-7. **Schedule Optimization:** Agent determines optimal extraction timing based on upstream update patterns
-
-### 14.2 Agentic Workflow Components
-
-- **Analyzer Agent:** Examines source data to determine extraction strategy
-- **Parser Agent:** Dynamically generates or selects parsers
-- **Linker Agent:** Performs semantic entity linking
-- **Validator Agent:** Checks data quality and flags issues
-- **Orchestrator Agent:** Coordinates multi-source parallel extraction
-- **Recovery Agent:** Handles errors and retries
+| Library | Versi | Fungsi |
+|---------|-------|--------|
+| Apache Jena | 3.9.0 | Membuat dan memanipulasi RDF model, SPARQL |
+| CARML | 0.3.2 | Eksekutor RML mapping (XML, JSON, CSV → RDF) |
+| TopBraid SHACL | 1.1.0 | Validasi constraint RDF |
+| Apache Commons CLI | — | Parsing argumen command line |
+| SLF4J | 1.7.25 | Logging |
+| JUnit | 4.13.1 | Unit testing |
 
 ---
 
-## 15. Summary Statistics
+## 8. Testing
 
-### 15.1 Current System Metrics
+Ada 4 unit test di `src/test/java/`:
 
-| Metric | Value |
-|--------|-------|
-| **Data Sources** | 7 (CVE, CPE, CWE, CAPEC, CAT, ICSA, CVSS) |
-| **Parsers Implemented** | 8 (including JSON variants) |
-| **RML Mapping Files** | 15 |
-| **Ontology Files** | 8 |
-| **SHACL Constraint Files** | 6 |
-| **Test Cases** | 4 |
-| **Triple Store Backends** | 3 (Fuseki, Virtuoso, Dummy) |
-| **Named Graphs** | 7 |
-| **Update Frequency** | Daily (CVE), Weekly (CPE), Bi-annual (others) |
+| File | Yang Diuji |
+|------|------------|
+| `TestCVEParser.java` | Ekstraksi CVE dari JSON |
+| `TestCPEParser.java` | Ekstraksi CPE dari XML |
+| `TestCWEParser.java` | Ekstraksi CWE dari XML |
+| `TestCAPECParser.java` | Ekstraksi CAPEC dari XML |
 
+Test bisa dijalankan dengan menghapus flag `-DskipTests=true` saat build. Test juga menjalankan pengecekan SHACL constraint untuk memastikan hasil transformasi sudah benar.
 
+---
 
-**Next Steps:** Proceed to Issue #02 - Design agentic pipeline architecture.
+## 9. Performa (dari Benchmark Resmi)
+
+Diuji di macOS, Intel i7 3.1GHz, 16GB RAM — menggunakan Virtuoso sebagai triplestore.
+
+| Sumber | Durasi (tanpa SHACL) | Perkiraan Triple |
+|--------|----------------------|------------------|
+| CVE | ~45 menit | ~15 juta |
+| CPE | ~30 menit | ~5 juta |
+| CWE | ~10 menit | ~800 ribu |
+| CAPEC | ~5 menit | ~200 ribu |
+| ATT&CK | ~3 menit | ~300 ribu |
+| ICSA | < 1 menit | ~50 ribu |
+
+Mengaktifkan validasi SHACL menambah waktu eksekusi sekitar 30–50%, terutama untuk CPE yang punya data paling besar.
+
+---
+
+## 10. Akses ke Data
+
+Hasil knowledge graph yang sudah dibangun bisa diakses melalui:
+
+- **SPARQL Endpoint:** https://w3id.org/sepses/sparql
+- **Linked Data Interface:** https://sepses.ifs.tuwien.ac.at/resource/cve/CVE-2018-4449 (contoh)
+- **Triple Pattern Fragments:** http://ldf-server.sepses.ifs.tuwien.ac.at/
+- **File Dump (Turtle/HDT):** https://sepses.ifs.tuwien.ac.at/index.php/datasets/
+
+Contoh query SPARQL tersedia di file `example-queries.txt` di root project.
+
+---
+
+## 11. Keterbatasan yang Ditemukan
+
+Berikut masalah-masalah nyata yang ditemukan langsung dari kode:
+
+**1. NVD API v1.1 sudah deprecated**
+CVE feed yang digunakan (`nvd.nist.gov/feeds/json/cve/1.1/`) sudah resmi deprecated oleh NIST sejak 2023 dan digantikan NVD API 2.0. Pipeline bisa berhenti berfungsi kapan saja jika feed lama dimatikan.
+
+**2. Nama file CAPEC di-hardcode**
+Di `CAPECParser.java` baris 111, nama file XML di-hardcode menjadi `"input/capec/capec_v3.9.xml"`. Kalau MITRE merilis versi baru (misalnya v3.10), file yang diunduh otomatis akan punya nama berbeda dan parser akan gagal menemukan file tersebut.
+
+**3. Referensi file SHACL yang salah untuk CVE**
+`CVEParserJson.java` memanggil file `shacl/cve_json.ttl`, padahal file yang ada di repo adalah `shacl/cve.ttl`. Artinya, validasi SHACL untuk CVE akan selalu gagal dengan `FileNotFoundException` jika flag `-v` digunakan.
+
+**4. Eksekusi berurutan, tidak paralel**
+Semua sumber diproses satu per satu. Tidak ada mekanisme untuk menjalankan beberapa sumber secara bersamaan. Total waktu untuk membangun full knowledge graph bisa mencapai 1,5–2 jam lebih.
+
+**5. Tidak ada scheduler bawaan**
+Pipeline harus dijalankan manual atau dengan bantuan cron/skrip eksternal. Tidak ada mekanisme otomatis untuk memeriksa pembaruan data secara berkala.
+
+**6. Validasi SHACL langsung menghentikan pipeline**
+Jika validasi gagal, proses langsung berhenti dan tidak ada upaya pemulihan atau penanganan sebagian data yang valid. Seluruh proses untuk sumber tersebut dianggap gagal.
+
+**7. Dua parser warisan tidak terhubung ke MainParser**
+`CVEParser.java` (versi XML lama) dan `ICSAParserJson.java` masih ada di codebase tapi tidak bisa dipanggil lewat `MainParser`. Ini berpotensi membingungkan.
+
+---
+
+## 12. Ringkasan Statistik Kode
+
+| Item | Jumlah |
+|------|--------|
+| Sumber data yang didukung | 7 |
+| File Java (.java) | 33 |
+| Parser aktif (terhubung ke MainParser) | 6 (CVE, CPE, CWE, CAPEC, CAT, ICSA) |
+| File RML | 15 |
+| File ontologi OWL | 8 |
+| File SHACL constraint | 6 |
+| Unit test | 4 |
+| Backend triplestore | 3 (Fuseki, Virtuoso, Dummy) |
+| Named graph di triplestore | 6 (satu per sumber aktif) |
