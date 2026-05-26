@@ -6,19 +6,6 @@ Pada arsitektur ETL tradisional, proses ekstraksi, parsing, linking, dan validas
 
 Pipeline ini tetap mempertahankan kompatibilitas dengan ontology/schema SEPSES yang digunakan pada repository asli `cyber-kg-converter`.
 
----
-
-# Tujuan Arsitektur Agentic
-
-Arsitektur agentic dirancang untuk:
-
-- Mengotomatisasi proses ETL secara lebih adaptif
-- Memisahkan tanggung jawab tiap proses ke agent khusus
-- Mendukung runtime decision making
-- Mempermudah validasi dan recovery terhadap data bermasalah
-- Mempermudah scaling dan maintenance pipeline
-
----
 
 # Agent Roles
 
@@ -223,32 +210,6 @@ Menjalankan validasi RDF menggunakan SHACL untuk memastikan:
 - struktur graph valid
 - relasi tidak rusak
 - entity tidak hilang
-
----
-
-# Perbedaan ETL Tradisional dan Agentic Pipeline
-
-| ETL Tradisional | Agentic Pipeline |
-|---|---|
-| Static workflow | Dynamic workflow |
-| Hardcoded parser | Adaptive parser selection |
-| Sequential execution | Modular agent orchestration |
-| Manual validation | Runtime validation |
-| Limited recovery | Adaptive recovery |
-| Fixed transformation | Dynamic decision making |
-
----
-
-# Keunggulan Pendekatan Agentic
-
-- Lebih fleksibel terhadap perubahan format data
-- Lebih mudah dikembangkan
-- Mendukung runtime adaptation
-- Mempermudah debugging
-- Mendukung autonomous validation
-- Mempermudah integrasi multi-source cybersecurity data
-
----
 
 # Rencana Implementasi
 
