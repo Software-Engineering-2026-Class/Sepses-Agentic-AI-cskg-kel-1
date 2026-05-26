@@ -112,7 +112,7 @@ Agent ini bertanggung jawab untuk membangun relasi antar entitas dari berbagai s
 
 ---
 
-## 4. ValidatorAgent (Opsional)
+## 4. ValidatorAgent
 
 ### Tugas Utama
 
