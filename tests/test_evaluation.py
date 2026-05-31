@@ -12,6 +12,9 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import matplotlib
+matplotlib.use("Agg")
+
 import pytest
 
 # Tambahkan root ke path

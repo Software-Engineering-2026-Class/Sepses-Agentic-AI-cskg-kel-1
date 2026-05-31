@@ -1,0 +1,27 @@
+# Use Case 3: ICS Advisory Exploration
+# Given an ICSA, find the related CVE, CWE, and the available attack context (MITRE ATT&CK techniques).
+
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cwe: <http://w3id.org/sepses/vocab/ref/cwe#>
+PREFIX capec: <http://w3id.org/sepses/vocab/ref/capec#>
+PREFIX attack: <http://w3id.org/sepses/vocab/ref/attack#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?advisoryId ?cveId ?cweId ?capecId ?techniqueId ?techniqueTitle WHERE {
+  ?advisory a icsa:ICSA ;
+            dcterms:identifier ?advisoryId ;
+            icsa:hasCVE ?cve ;
+            icsa:hasCWE ?cwe .
+  ?cve dcterms:identifier ?cveId .
+  ?cwe dcterms:identifier ?cweId .
+  
+  ?capec a capec:CAPEC ;
+         dcterms:identifier ?capecId ;
+         capec:hasRelatedWeakness ?cwe .
+         
+  ?technique a attack:Technique ;
+             dcterms:identifier ?techniqueId ;
+             dcterms:title ?techniqueTitle ;
+             attack:hasCAPEC ?capec .
+}

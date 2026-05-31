@@ -2,224 +2,351 @@
 
 ## Overview
 
-Pada arsitektur ETL tradisional, proses ekstraksi, parsing, linking, dan validasi dilakukan secara statis dan berurutan. Pada proyek ini, pipeline akan didesain ulang menjadi **Agentic AI Pipeline**, di mana setiap tahap dijalankan oleh agent modular yang dapat mengambil keputusan secara dinamis berdasarkan jenis data, kondisi runtime, dan kebutuhan validasi.
+The SEPSES Agentic AI Cybersecurity Knowledge Graph pipeline replaces the traditional static ETL workflow with an **Agentic AI Pipeline**. Each stage is handled by a modular **agent** that can make runtime decisions based on data format, content, and validation results.
 
-Pipeline ini tetap mempertahankan kompatibilitas dengan ontology/schema SEPSES yang digunakan pada repository asli `cyber-kg-converter`.
+The pipeline maintains full compatibility with the SEPSES/ICS-SEC ontology and produces RDF/Turtle output loadable into a SPARQL endpoint.
 
+### Design Principles
 
-# Agent Roles
-
-## 1. DataFetcherAgent
-
-### Tugas Utama
-
-Agent ini bertanggung jawab untuk mengambil data dari berbagai sumber eksternal seperti API, file ZIP, CSV, JSON, dan XML.
-
-### Tanggung Jawab
-
-- Mengunduh dataset cybersecurity
-- Mengekstrak file ZIP
-- Menyimpan data mentah ke direktori input
-- Membaca konfigurasi URL dari file konfigurasi
-
-### Data Sources
-
-- CVE
-- CVSS
-- CPE
-- CWE
-- CAPEC
-- MITRE ATT&CK
-- ICSA
-
-### Tools / Interface
-
-| Tool | Fungsi |
-|------|---------|
-| requests / urllib | HTTP downloader |
-| zipfile | Ekstraksi file ZIP |
-| pandas | Membaca CSV |
-| json | Membaca JSON |
-| xml.etree | Membaca XML |
-| config.properties | Konfigurasi URL sumber data |
+- **4 main agents** — each agent owns one pipeline stage
+- **Supporting modules** — orchestration, RDF generation, evaluation, and LLM are helpers, not agents
+- **LLM is optional** — the entire pipeline runs deterministically without any API key
+- **No over-engineering** — agents are thin wrappers with clear, single responsibilities
 
 ---
 
-## 2. ParserAgent
+## Architecture Diagram
 
-### Tugas Utama
-
-Agent ini bertanggung jawab untuk melakukan parsing data mentah menjadi struktur data yang terstandarisasi sebelum diproses menjadi RDF.
-
-### Tanggung Jawab
-
-- Parsing JSON/XML/CSV
-- Membersihkan data
-- Normalisasi field
-- Ekstraksi entity
-- Mapping data ke RDF menggunakan RML
-
-### Output
-
-Data terstruktur dalam bentuk:
-
-- Python dictionary
-- RDF triples
-- intermediate structured objects
-
-### Tools / Interface
-
-| Tool | Fungsi |
-|------|---------|
-| json | Parsing JSON |
-| csv | Parsing CSV |
-| xml.etree.ElementTree | Parsing XML |
-| pandas | Manipulasi data |
-| RML Engine | Mapping ke RDF |
-| rdflib | RDF object handling |
-
----
-
-## 3. LinkerAgent
-
-### Tugas Utama
-
-Agent ini bertanggung jawab untuk membangun relasi antar entitas dari berbagai sumber data sehingga membentuk cybersecurity knowledge graph yang terhubung.
-
-### Tanggung Jawab
-
-- Entity linking
-- Relationship creation
-- Cross-source mapping
-- RDF triple generation
-- Sinkronisasi dengan ontology SEPSES
-
-### Contoh Relationship
-
-- CVE → CWE
-- CVE → CPE
-- CVE → ATT&CK
-- CAPEC → ATT&CK
-
-### Tools / Interface
-
-| Tool | Fungsi |
-|------|---------|
-| SPARQLWrapper | Query SPARQL |
-| rdflib | RDF graph manipulation |
-| RDF triple store API | Penyimpanan graph |
-| Ontology vocabularies | Mapping ontology |
-
----
-
-## 4. ValidatorAgent
-
-### Tugas Utama
-
-Agent ini bertanggung jawab untuk melakukan validasi terhadap RDF knowledge graph yang telah dibangun.
-
-### Tanggung Jawab
-
-- SHACL validation
-- Mengecek missing entity
-- Mengecek broken relationship
-- Validasi struktur RDF
-- Runtime consistency checking
-
-### Tools / Interface
-
-| Tool | Fungsi |
-|------|---------|
-| pySHACL | SHACL validation |
-| rdflib | RDF validation |
-| RDF tools | Triple checking |
-| Logging system | Error reporting |
-
----
-
-# Alur Agentic ETL Pipeline
-
-```text
-Cybersecurity Data Sources
-        ↓
-DataFetcherAgent
-        ↓
-ParserAgent
-        ↓
-LinkerAgent
-        ↓
-ValidatorAgent
-        ↓
-RDF/Turtle Knowledge Graph
-        ↓
-SPARQL Endpoint (Virtuoso / Qlever)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Pipeline Runner (Orchestrator)                   │
+│                  Coordinates order, handles errors                   │
+│                     NOT a main agent — just a runner                 │
+├──────────┬──────────┬──────────┬──────────┬──────────────────────────┤
+│          │          │          │          │                          │
+│  ┌───────▼───────┐  │  ┌───────▼───────┐  │                        │
+│  │ FetcherAgent  │  │  │  ParserAgent  │  │                        │
+│  │               │  │  │               │  │                        │
+│  │ CVE/NVD       │  │  │ JSON/XML/CSV  │  │                        │
+│  │ CVSS (in CVE) │  │  │ auto-detect   │  │                        │
+│  │ CPE           │  │  │ CAPEC parser  │  │                        │
+│  │ CWE           │  │  │ ATT&CK parser │  │                        │
+│  │ CAPEC         │  │  │ ICSA parser   │  │                        │
+│  │ ATT&CK E+ICS │  │  │ CVE parser    │  │                        │
+│  │ ICSA          │  │  │ CWE parser    │  │                        │
+│  └───────┬───────┘  │  │ CPE parser    │  │                        │
+│          │          │  └───────┬───────┘  │                        │
+│          │          │          │          │                        │
+│          │    ┌─────▼──────┐   │   ┌──────▼──────┐                 │
+│          │    │ LinkerAgent│   │   │ Validation  │                 │
+│          │    │            │   │   │   Agent     │                 │
+│          │    │ CVE→CWE    │   │   │             │                 │
+│          │    │ CVE→CPE    │   │   │ SHACL       │                 │
+│          │    │ CVE→CVSS   │   │   │ mandatory   │                 │
+│          │    │ CWE→CAPEC  │   │   │ fields      │                 │
+│          │    │ ICSA→CVE   │   │   │ duplicates  │                 │
+│          │    │ ICSA→CWE   │   │   │ missing ref │                 │
+│          │    │ ATT&CK→    │   │   └──────┬──────┘                 │
+│          │    │   Tactic   │   │          │                        │
+│          │    └─────┬──────┘   │          │                        │
+│          │          │          │          │                        │
+├──────────┴──────────┴──────────┴──────────┴────────────────────────┤
+│                        Supporting Modules                          │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│  │ rdf_builder  │ │ llm_client  │ │ evaluator   │ │  endpoint   │ │
+│  │ .py          │ │ .py         │ │ .py         │ │  _loader.py │ │
+│  │              │ │ (optional)  │ │             │ │             │ │
+│  │ RDFLib-based │ │ OPENAI_API  │ │ KG stats    │ │ QLever /    │ │
+│  │ turtle gen   │ │ _KEY from   │ │ reports     │ │ Virtuoso    │ │
+│  │              │ │ env var     │ │             │ │ loader      │ │
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-# Contoh Workflow Pipeline
+## Pipeline Flow
 
-## 1. DataFetcherAgent
-
-Mengunduh dataset:
-
-```text
-nvdcve-1.1-modified.json.zip
 ```
-
-Kemudian:
-- mengekstrak file
-- menyimpan hasil ekstraksi ke folder input
+Data Sources (NVD, MITRE, CISA, ...)
+        │
+        ▼
+  ┌─────────────┐
+  │ FetcherAgent │──→ data/raw/{source}/  +  .meta.json
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ ParserAgent  │──→ List[ParsedEntity]  (internal models)
+  └──────┬──────┘
+         │
+         ▼
+  ┌─────────────┐
+  │ LinkerAgent  │──→ RDF Graph with cross-source relationships
+  └──────┬──────┘     (uses rdf_builder module)
+         │
+         ▼
+  ┌──────────────────┐
+  │ ValidationAgent  │──→ Validation report + cleaned RDF/Turtle
+  └──────┬───────────┘
+         │
+         ▼
+   data/rdf_output/*.ttl  →  SPARQL endpoint (optional)
+```
 
 ---
 
-## 2. ParserAgent
+## Agent Definitions
 
-Membaca file JSON hasil ekstraksi:
+### 1. FetcherAgent
 
-```text
-nvdcve-1.1-modified.json
-```
+**Responsibility:** Download and cache all required cybersecurity data sources.
 
-Kemudian:
-- parsing data
-- normalisasi struktur
-- mapping ke RDF menggunakan template RML
+| Aspect | Detail |
+|--------|--------|
+| **Input** | Source configuration (URLs, API keys from env) |
+| **Output** | Raw files in `data/raw/{source}/` + `.meta.json` per file |
+| **Caching** | Skips download if file exists, unless `force=True` |
+| **Metadata** | Timestamp, source URL, file size, SHA-256 checksum |
+
+**Data sources handled:**
+
+| Source | Directory | Format | Notes |
+|--------|-----------|--------|-------|
+| CVE/NVD | `data/raw/nvd/` | JSON | NVD API 2.0, paginated. CVSS embedded in CVE records |
+| CPE | `data/raw/cpe/` | JSON | NVD API 2.0, paginated |
+| CWE | `data/raw/cwe/` | XML (zip) | MITRE, auto-extracted |
+| CAPEC | `data/raw/capec/` | XML | MITRE |
+| MITRE ATT&CK | `data/raw/attack/` | JSON | Enterprise + ICS STIX bundles |
+| ICSA | `data/raw/icsa/` | JSON | CISA KEV + CSAF advisories |
+
+**Environment variables:**
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `NVD_API_KEY` | Optional | Higher NVD API rate limits (50 vs 5 req/30s) |
+
+**Implementation:** `src/agents/fetcher_agent.py` wrapping `src/ingestion/` fetchers.
 
 ---
 
-## 3. LinkerAgent
+### 2. ParserAgent
 
-Membuat relasi antar entitas:
+**Responsibility:** Detect data format, parse each source, extract cybersecurity entities, and map fields into internal `ParsedEntity` models aligned with the SEPSES/ICS-SEC ontology.
 
-```text
-CVE ↔ CWE
-CVE ↔ CPE
-CVE ↔ ATT&CK
-```
+| Aspect | Detail |
+|--------|--------|
+| **Input** | Raw files from `data/raw/{source}/` |
+| **Output** | `List[ParsedEntity]` — normalized internal models |
+| **Format detection** | Auto-detect JSON / XML / CSV based on file extension and content sniffing |
 
-menggunakan:
-- SPARQL
-- RDF graph processing
+**Parser registry:**
+
+| Source | Parser | Input Format |
+|--------|--------|-------------|
+| CAPEC | `CAPECParser` | XML |
+| MITRE ATT&CK | `MitreAttackParser` | STIX JSON |
+| ICSA | `ICSAParser` | CSV / CSAF JSON |
+| CVE/NVD | `CVEParser` | NVD API 2.0 JSON |
+| CWE | `CWEParser` | XML |
+| CPE | `CPEParser` | NVD API 2.0 JSON / XML |
+
+**Optional LLM usage:**
+- Suggest which parser to use for an ambiguous file format
+- Explain parse errors in human-readable language
+
+**Implementation:** `src/agents/parser_agent.py` wrapping `src/parser/` modules.
 
 ---
 
-## 4. ValidatorAgent
+### 3. LinkerAgent
 
-Menjalankan validasi RDF menggunakan SHACL untuk memastikan:
-- struktur graph valid
-- relasi tidak rusak
-- entity tidak hilang
+**Responsibility:** Create cross-source relationships using deterministic identifiers to build a connected cybersecurity knowledge graph.
 
-# Rencana Implementasi
+| Aspect | Detail |
+|--------|--------|
+| **Input** | `List[ParsedEntity]` from ParserAgent |
+| **Output** | RDF `Graph` with all entities + cross-source links |
+| **Tool** | Uses `rdf_builder.py` module for RDF generation |
 
-Pipeline akan dikembangkan menggunakan:
+**Relationship mappings:**
 
-- Python
-- RDFLib
-- SPARQLWrapper
-- pySHACL
-- RML Mapping
-- Virtuoso / Qlever SPARQL Endpoint
+| Relationship | Deterministic Key | SEPSES Predicate |
+|-------------|-------------------|-----------------|
+| CVE → CWE | CWE-ID in CVE `weaknesses` | `cve:hasCWE` |
+| CVE → CPE | CPE URI in CVE `configurations` | `cve:hasCPE` |
+| CVE → CVSS | Embedded in CVE record | `cve:hasCVSS3BaseMetric` / `cve:hasCVSS2BaseMetric` |
+| CWE → CAPEC | CAPEC-ID in CWE `Related_Attack_Patterns` | `cwe:hasCAPEC` |
+| ICSA → CVE | CVE-ID in advisory | `icsa:hasCVE` |
+| ICSA → CWE | CWE-ID in advisory | `icsa:hasCWE` |
+| ICSA → Product/Vendor | Vendor/product names in advisory | `icsa:hasVendor` / `icsa:hasProduct` |
+| ATT&CK Technique → Tactic | kill_chain_phases in STIX | `attack:accomplishesTactic` |
+| ATT&CK → CAPEC | external_references in STIX | `attack:hasCAPEC` |
 
-dengan tetap mempertahankan kompatibilitas ontology dari SEPSES Cybersecurity Knowledge Graph.
+**Optional LLM usage:**
+- Suggest additional mappings for unmapped fields
+- Explain linking decisions in reports
+
+**Implementation:** `src/agents/linker_agent.py` using `src/ontology_mapper/` and `src/tools/rdf_builder.py`.
+
+---
+
+### 4. ValidationAgent
+
+**Responsibility:** Validate the generated RDF/Turtle graph for correctness, completeness, and consistency.
+
+| Aspect | Detail |
+|--------|--------|
+| **Input** | RDF `Graph` from LinkerAgent |
+| **Output** | Validation report (JSON) + optionally corrected graph |
+
+**Validation checks:**
+
+| Check | Description |
+|-------|-------------|
+| **Mandatory fields** | Every CVE must have `identifier`, `description`, `issued` |
+| **Missing references** | Detect dangling links (e.g., CVE references a CWE that doesn't exist) |
+| **Duplicate identifiers** | Detect multiple entities with the same external ID |
+| **SHACL validation** | Optional, uses `pyshacl` with SEPSES-aligned shape files |
+| **Turtle syntax** | Verify the output serializes cleanly |
+
+**Optional LLM usage:**
+- Explain validation failures in natural language
+- Suggest fixes for common validation errors
+
+**Implementation:** `src/agents/validation_agent.py` using `src/validation/` modules.
+
+---
+
+## Supporting Modules (Not Agents)
+
+These are helper modules / tools used **by** the agents. They do not make autonomous decisions.
+
+### `src/tools/rdf_builder.py`
+
+Deterministically generates RDF/Turtle using RDFLib. Wraps `SepsesOntologyMapper` for entity-to-RDF conversion.
+
+### `src/tools/llm_client.py`
+
+Optional LLM integration. Reads `OPENAI_API_KEY` from environment variable.
+
+```python
+# Usage (in documentation examples):
+# OPENAI_API_KEY={Token api}
+```
+
+**LLM use cases (all optional, pipeline works without):**
+
+| Use Case | Where Used |
+|----------|-----------|
+| Parser selection suggestion | ParserAgent |
+| Mapping suggestion for unknown fields | LinkerAgent |
+| Validation error explanation | ValidationAgent |
+| Pipeline execution summary | Pipeline Runner |
+
+**If `OPENAI_API_KEY` is not set**, all LLM calls gracefully return `None` and the pipeline continues with deterministic logic only.
+
+### `src/tools/evaluator.py`
+
+Computes KG statistics (triple counts, entity counts per class, relationship density) and writes evaluation reports to `data/reports/`.
+
+### `src/tools/endpoint_loader.py`
+
+Loads RDF/Turtle files into QLever or Virtuoso SPARQL endpoints.
+
+### `src/agentic_pipeline/run_pipeline.py` (Orchestrator)
+
+Coordinates the pipeline order: Fetch → Parse → Link → Validate → Serialize.
+This is a **runner script**, not a main agent. It calls the 4 agents in sequence and handles errors and reporting.
+
+---
+
+## Project Structure (Agent-Related)
+
+```
+src/
+├── agents/                          # 4 Main Agents
+│   ├── __init__.py
+│   ├── fetcher_agent.py             # FetcherAgent
+│   ├── parser_agent.py              # ParserAgent
+│   ├── linker_agent.py              # LinkerAgent
+│   └── validation_agent.py          # ValidationAgent
+│
+├── tools/                           # Supporting Modules
+│   ├── __init__.py
+│   ├── rdf_builder.py               # RDF/Turtle generation
+│   ├── llm_client.py                # Optional LLM helper
+│   ├── evaluator.py                 # KG statistics
+│   └── endpoint_loader.py           # SPARQL endpoint loader
+│
+├── ingestion/                       # Fetcher implementations (used by FetcherAgent)
+│   ├── base_fetcher.py
+│   ├── nvd_fetcher.py
+│   ├── cwe_fetcher.py
+│   ├── capec_fetcher.py
+│   ├── cpe_fetcher.py
+│   ├── attack_fetcher.py
+│   └── icsa_fetcher.py
+│
+├── parser/                          # Parser implementations (used by ParserAgent)
+│   ├── base.py
+│   ├── models.py
+│   ├── capec_parser.py
+│   ├── mitre_attack_parser.py
+│   ├── icsa_parser.py
+│   ├── cve_parser.py                # TODO: Phase 2
+│   ├── cwe_parser.py                # TODO: Phase 3
+│   └── cpe_parser.py                # TODO: Phase 4
+│
+├── ontology_mapper/                 # SEPSES mapping (used by LinkerAgent + rdf_builder)
+│   ├── namespaces.py
+│   ├── identifiers.py
+│   └── sepses_mapper.py
+│
+├── validation/                      # Validation logic (used by ValidationAgent)
+│   └── shacl_validator.py           # TODO: Phase 5
+│
+└── agentic_pipeline/                # Pipeline runner (orchestrator)
+    ├── __init__.py
+    └── run_pipeline.py
+```
+
+---
+
+## Running the Pipeline
+
+```bash
+# Full pipeline (fetch + parse + link + validate)
+python -m src.agentic_pipeline.run_pipeline --all-sources
+
+# Specific sources only
+python -m src.agentic_pipeline.run_pipeline \
+  --capec data/raw/capec/capec_latest.xml \
+  --mitre-attack data/raw/attack/enterprise-attack.json \
+  --output data/rdf_output/sepses_cskg.ttl
+
+# Fetch only
+python scripts/fetch_all_sources.py --sources nvd cwe capec
+
+# With optional LLM (set env var)
+# OPENAI_API_KEY={Token api}
+python -m src.agentic_pipeline.run_pipeline --all-sources --enable-llm
+```
+
+---
+
+## Implementation Technologies
+
+| Technology | Purpose |
+|-----------|---------|
+| Python 3.11+ | Core language |
+| RDFLib | RDF graph construction and Turtle serialization |
+| requests + tenacity | HTTP downloads with retry |
+| defusedxml / lxml | XML parsing (CWE, CAPEC) |
+| ijson | Streaming JSON parsing (large NVD files) |
+| pyshacl | SHACL validation |
+| loguru | Structured logging |
+| SPARQLWrapper | SPARQL endpoint queries |
+| OpenAI API | Optional LLM integration (via `llm_client.py`) |
+
+The pipeline maintains full compatibility with the SEPSES Cybersecurity Knowledge Graph ontology.

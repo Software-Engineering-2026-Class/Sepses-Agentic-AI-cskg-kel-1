@@ -197,12 +197,12 @@ def plot_link_quality(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
     fig, ax = plt.subplots(figsize=(10, 6))
     bars1 = ax.bar(
         [i - width / 2 for i in x], linked,
-        width, label="Terlink ✓",
+        width, label="Terlink",
         color=SEPSES_COLORS["secondary"], edgecolor="white"
     )
     bars2 = ax.bar(
         [i + width / 2 for i in x], not_linked,
-        width, label="Tidak terlink ✗",
+        width, label="Tidak Terlink",
         color=SEPSES_COLORS["danger"], edgecolor="white"
     )
 

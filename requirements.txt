@@ -32,7 +32,7 @@ beautifulsoup4==4.13.4    # Parsing HTML (kalau ada scraping)
 lxml==5.4.0               # Parser XML/HTML yang cepat
 xmltodict==0.14.2         # Konversi XML → dict (berguna untuk CVE XML feed)
 ijson==3.3.0              # Streaming JSON parser (untuk file NVD yang besar)
-stix2==3.1.0              # Parsing MITRE ATT&CK / CAPEC (format STIX)
+stix2>=3.0.0              # Parsing MITRE ATT&CK / CAPEC (format STIX)
 mitreattack-python==3.0.5 # Helper resmi untuk MITRE ATT&CK
 
 
