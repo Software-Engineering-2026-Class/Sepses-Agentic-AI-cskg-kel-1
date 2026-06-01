@@ -92,6 +92,9 @@ def main() -> None:
     parser.add_argument("--capec", help="Local CAPEC XML file.")
     parser.add_argument("--mitre-attack", help="Local MITRE ATT&CK JSON file.")
     parser.add_argument("--icsa", help="Local ICSA JSON/CSV file.")
+    parser.add_argument("--cve", help="Local CVE JSON file.")
+    parser.add_argument("--cwe", help="Local CWE XML file.")
+    parser.add_argument("--cpe", help="Local CPE JSON file.")
     
     parser.add_argument("--output", default="data/rdf_output/sepses_cskg.ttl", help="TTL output path.")
     
@@ -110,6 +113,12 @@ def main() -> None:
         raw_files["attack"] = [Path(args.mitre_attack)]
     if args.icsa:
         raw_files["icsa"] = [Path(args.icsa)]
+    if args.cve:
+        raw_files["nvd"] = [Path(args.cve)]
+    if args.cwe:
+        raw_files["cwe"] = [Path(args.cwe)]
+    if args.cpe:
+        raw_files["cpe"] = [Path(args.cpe)]
 
     if not sources_to_fetch and not raw_files:
         parser.error("Must provide either --all-sources, --fetch, or direct local file paths (--capec, etc.).")

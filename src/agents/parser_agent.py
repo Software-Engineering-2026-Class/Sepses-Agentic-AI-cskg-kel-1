@@ -16,6 +16,9 @@ from src.parser.models import ParsedEntity
 from src.parser.capec_parser import CAPECParser
 from src.parser.mitre_attack_parser import MitreAttackParser
 from src.parser.icsa_parser import ICSAParser
+from src.parser.cve_parser import CVEParser
+from src.parser.cwe_parser import CWEParser
+from src.parser.cpe_parser import CPEParser
 from src.tools.llm_client import LLMClient
 
 
@@ -28,7 +31,9 @@ class ParserAgent:
             "capec": CAPECParser(),
             "attack": MitreAttackParser(),
             "icsa": ICSAParser(),
-            # TODO: CVEParser, CWEParser, CPEParser will be added here in Phase 2, 3, 4
+            "nvd": CVEParser(),
+            "cwe": CWEParser(),
+            "cpe": CPEParser(),
         }
 
     def detect_format(self, filepath: Path) -> str:
