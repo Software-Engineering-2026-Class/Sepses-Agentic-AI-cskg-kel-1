@@ -198,8 +198,6 @@ Each downloaded file also has a `.meta.json` sidecar with provenance
 
 ```
 
-```
-
 You may pass a file or a directory to each source argument.
 
 ## Pipeline Usage Guide (Issue #11)
