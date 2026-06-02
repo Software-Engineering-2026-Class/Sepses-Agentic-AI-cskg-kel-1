@@ -112,6 +112,42 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### Dockerized Environment
+
+Run the full project stack (runtime + QLever bootstrap service) with:
+
+```bash
+docker compose up -d --build
+```
+
+Services:
+
+- `sepses-app`: keeps the project image alive and is used to run scripts/commands.
+- `sepses-qlever`: waits for `data/rdf_output/*.ttl` and starts the SPARQL endpoint automatically when data is available.
+
+```bash
+docker compose exec sepses-app python scripts/fetch_all_sources.py
+docker compose exec sepses-app python -m src.agentic_pipeline.run_pipeline --all-sources --output data/rdf_output/sepses_cskg.ttl
+```
+
+If needed, trigger a manual endpoint reload from the `sepses-qlever` service:
+
+```bash
+docker compose exec sepses-qlever python -m src.sparql.rdf_loader
+```
+
+SPARQL endpoint:
+
+```
+http://localhost:7001/sparql
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
 ---
 
 ## Data Fetching

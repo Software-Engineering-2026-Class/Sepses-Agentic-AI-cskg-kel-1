@@ -1,0 +1,31 @@
+services:
+  sepses-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    environment:
+      PYTHONUNBUFFERED: "1"
+      NVD_API_KEY: ${NVD_API_KEY:-}
+    volumes:
+      - .:/app
+    command: ["sleep", "infinity"]
+    tty: true
+
+  sepses-qlever:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    environment:
+      PYTHONUNBUFFERED: "1"
+      QLEVER_BOOT_TIMEOUT_SECONDS: ${QLEVER_BOOT_TIMEOUT_SECONDS:-600}
+      QLEVER_CHECK_INTERVAL_SECONDS: ${QLEVER_CHECK_INTERVAL_SECONDS:-10}
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["/bin/bash", "/app/scripts/docker-entrypoint-qlever.sh"]
+    ports:
+      - "7001:7001"
+    depends_on:
+      - sepses-app
