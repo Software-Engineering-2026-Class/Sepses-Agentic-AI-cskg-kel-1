@@ -79,6 +79,31 @@ class BaseFetcher(ABC):
     # Download helpers
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _looks_like_invalid_nvd_key_response(response: requests.Response) -> bool:
+        """Detect NVD 404 responses caused by an invalid API key."""
+        return (
+            response.status_code == 404
+            and "services.nvd.nist.gov/rest/json" in response.url
+        )
+
+    def _http_get(self, url: str, *, headers: dict[str, str] | None = None, **kwargs: Any) -> requests.Response:
+        """Perform GET with a fallback for invalid NVD API keys."""
+        headers = dict(headers or {})
+        response = requests.get(url, headers=headers, **kwargs)
+
+        has_nvd_auth_header = "apiKey" in headers
+        if has_nvd_auth_header and self._looks_like_invalid_nvd_key_response(response):
+            logger.warning(
+                "[{}] API key was rejected by NVD (HTTP 404). Retrying without apiKey.",
+                self.source_name,
+            )
+            headers.pop("apiKey", None)
+            response = requests.get(url, headers=headers, **kwargs)
+
+        response.raise_for_status()
+        return response
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=2, min=2, max=30),
@@ -129,13 +154,12 @@ class BaseFetcher(ABC):
         logger.info("[{}] GET {}", self.source_name, url)
         t0 = time.monotonic()
 
-        response = requests.get(
+        response = self._http_get(
             url,
             headers=headers or {},
             stream=True,
             timeout=self.timeout,
         )
-        response.raise_for_status()
 
         sha256 = hashlib.sha256()
         size = 0
@@ -236,12 +260,11 @@ class BaseFetcher(ABC):
                 current_index,
             )
 
-            resp = requests.get(
+            resp = self._http_get(
                 page_url,
                 headers=headers or {},
                 timeout=self.timeout,
             )
-            resp.raise_for_status()
             data = resp.json()
 
             # NVD API v2 structure: {totalResults, resultsPerPage, startIndex, vulnerabilities/products/...}

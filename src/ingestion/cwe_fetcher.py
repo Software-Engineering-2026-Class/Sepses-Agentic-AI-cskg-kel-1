@@ -27,9 +27,21 @@ class CWEFetcher(BaseFetcher):
                 filename="cwec_latest.xml.zip",
                 extract_zip=True,
             )
+            xml_candidates: list[Path] = []
+            if filepath.suffix == ".zip":
+                xml_candidates = sorted(self.output_dir.glob("cwe*.xml"))
+                if not xml_candidates:
+                    self._extract_zip(filepath)
+                    xml_candidates = sorted(self.output_dir.glob("cwe*.xml"))
+
+            if not xml_candidates:
+                xml_candidates = sorted(self.output_dir.glob("*.xml"))
+            if not xml_candidates:
+                raise FileNotFoundError("No extracted CWE XML file found after unzip.")
+            cwe_xml = xml_candidates[0]
             return self._make_result(
                 status="ok",
-                files=[filepath.name],
+                files=[cwe_xml.name],
                 message="Downloaded and extracted CWE XML archive.",
             )
         except Exception as exc:
