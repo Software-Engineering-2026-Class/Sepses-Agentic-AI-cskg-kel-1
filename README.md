@@ -86,8 +86,8 @@ This project integrates multiple cybersecurity knowledge sources:
 ### Clone Repository
 
 ```bash
-git clone https://github.com/Software-Engineering-2026-Class/Sepses-Agentic-AI-ckg-kel-1.git
-cd Sepses-Agentic-AI-ckg-kel-1
+git clone https://github.com/Software-Engineering-2026-Class/Sepses-Agentic-AI-cskg-kel-1.git
+cd Sepses-Agentic-AI-cskg-kel-1
 ```
 
 ### Create Virtual Environment
@@ -171,19 +171,6 @@ python scripts/fetch_all_sources.py --sources nvd cwe capec
 python scripts/fetch_all_sources.py --max-nvd 500
 ```
 
-### Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NVD_API_KEY` | Optional | NVD API key for higher rate limits (50 req/30s vs 5 req/30s) |
-
-Set via `.env` file or shell:
-
-```bash
-export NVD_API_KEY=your-api-key-here  # Linux/macOS
-set NVD_API_KEY=your-api-key-here     # Windows CMD
-$env:NVD_API_KEY="your-api-key-here"  # PowerShell
-```
 
 ### Data Sources & Output Directories
 
@@ -209,65 +196,8 @@ Each downloaded file also has a `.meta.json` sidecar with provenance
 
 ---
 
-## Branching Strategy
-
-To maintain collaboration quality, development is organized using feature branches.
-
-Example:
-
-```txt
-main
-│
-├── dev
-├── feature/ingestion
-├── feature/parser
-├── feature/kg-generation
-├── feature/evaluation
-└── feature/sparql
 ```
 
-Workflow:
-
-```txt
-Feature Branch
-    ↓
-Pull Request
-    ↓
-   dev
-    ↓
-   main
-```
-
-
-## Implemetation of Knowledge Graph Engineer
-
-1. **Parsing CAPEC, MITRE ATT&CK, and ICSA**
-   - CAPEC XML
-   - MITRE ATT&CK STIX JSON, including Enterprise/ICS-style objects
-   - ICSA legacy CSV and CSAF-style JSON advisories
-
-2. **Mapping to SEPSES ontology**
-   - CAPEC entities and links to CWE/CAPEC
-   - ATT&CK techniques, tactics, mitigations, malware, software, groups, assets, campaigns, data sources/components
-   - ICSA advisories and links to CVE, CWE, vendors, products, product distributions, headquarters, and critical infrastructure sectors
-
-3. **Generating RDF/Turtle**
-   - Serializes a combined graph into `data/rdf_output/sepses_cskg.ttl`
-
-### Run the pipeline
-
-Place raw files under:
-
-```text
-data/raw/capec/
-data/raw/attack/
-data/raw/icsa/
-```
-
-Example:
-
-```bash
-python -m src.agentic_pipeline.run_pipeline   --capec data/raw/capec/capec.xml   --mitre-attack data/raw/attack/enterprise-attack.json   --icsa data/raw/icsa/icsa.csv   --output data/rdf_output/sepses_cskg.ttl
 ```
 
 You may pass a file or a directory to each source argument.
@@ -284,30 +214,6 @@ execution commands, expected outputs, and known limitations:
 ```bash
 python -m pytest -q
 ```
-
-### GitHub issue closure status
-
-Can be closed after review:
-
-- **#05 Implement agentic parsing and entity extraction**
-  - Implemented parser classes for CAPEC, MITRE ATT&CK, and ICSA.
-  - Extracted normalized entities and relationships.
-  - Mapped extracted entities to SEPSES classes/properties.
-
-- **#07 Generate RDF/Turtle output equivalent to SEPSES KG**
-  - Implemented RDF/Turtle serialization using `rdflib`.
-  - Output path: `data/rdf_output/sepses_cskg.ttl`.
-
-Can be partially closed or split:
-
-- **#06 Implement entity linking and relationship agent**
-  - Implemented linking for the requested sources only:
-    - CAPEC → CWE
-    - CAPEC → CAPEC
-    - ATT&CK → CAPEC
-    - ATT&CK relationship objects → SEPSES relationship predicates
-    - ICSA → CVE/CWE/vendor/product/sector resources
-  - Not full closure because full CVE/CWE/CPE/CVSS source parsing is outside this request.
 
 ## License
 
