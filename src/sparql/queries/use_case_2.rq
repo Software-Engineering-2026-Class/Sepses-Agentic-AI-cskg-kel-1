@@ -1,0 +1,21 @@
+# Use Case 2: Weakness and Attack Pattern Exploration
+# Given a CVE, find the related CWE and the attack patterns (CAPEC) associated with that CWE.
+
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cwe: <http://w3id.org/sepses/vocab/ref/cwe#>
+PREFIX capec: <http://w3id.org/sepses/vocab/ref/capec#>
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?cveId ?cweId ?capecId ?capecTitle WHERE {
+  ?icsa a icsa:ICSA ;
+        icsa:hasCVE ?cve ;
+        icsa:hasCWE ?cwe .
+  ?cve dcterms:identifier ?cveId .
+  ?cwe dcterms:identifier ?cweId .
+  
+  ?capec a capec:CAPEC ;
+         dcterms:identifier ?capecId ;
+         dcterms:title ?capecTitle ;
+         capec:hasRelatedWeakness ?cwe .
+}

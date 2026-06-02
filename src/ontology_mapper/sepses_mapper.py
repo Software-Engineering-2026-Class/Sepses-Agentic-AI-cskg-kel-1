@@ -10,7 +10,7 @@ from rdflib.namespace import DCTERMS as RDFLIB_DCTERMS, XSD
 
 from src.parser.models import ParsedEntity, Relationship
 from .identifiers import clean_text, slugify
-from .namespaces import ATTACK, CAPEC, CPE, CVE, CWE, ICSA
+from .namespaces import ATTACK, CAPEC, CPE, CVE, CWE, ICSA, CVSS
 
 
 class SepsesOntologyMapper:
@@ -24,6 +24,7 @@ class SepsesOntologyMapper:
         self.graph.bind("cve", CVE)
         self.graph.bind("cwe", CWE)
         self.graph.bind("cpe", CPE)
+        self.graph.bind("cvss", CVSS)
         self.graph.bind("dcterms", RDFLIB_DCTERMS)
         self.graph.bind("xsd", XSD)
 
@@ -51,6 +52,14 @@ class SepsesOntologyMapper:
             self._add_attack_properties(uri, entity)
         elif entity.source == "icsa":
             self._add_icsa_properties(uri, entity)
+        elif entity.source == "cve":
+            self._add_cve_properties(uri, entity)
+        elif entity.source == "cwe":
+            self._add_cwe_properties(uri, entity)
+        elif entity.source == "cpe":
+            self._add_cpe_properties(uri, entity)
+        elif entity.source == "cvss":
+            self._add_cvss_properties(uri, entity)
         return uri
 
     def _add_relationships(self, entity: ParsedEntity) -> None:
@@ -188,11 +197,20 @@ class SepsesOntologyMapper:
         if source == "cve":
             return CVE.CVE
         if source == "cwe":
+            if entity_type == "WeaknessCatalog":
+                return CWE.WeaknessCatalog
             return CWE.CWE
         if source == "cpe" and entity_type == "Vendor":
             return CPE.Vendor
         if source == "cpe" and entity_type == "Product":
             return CPE.Product
+        if source == "cpe" and entity_type == "CPE":
+            return CPE.CPE
+        if source == "cvss":
+            if entity_type == "CVSS3BaseMetric":
+                return CVSS.CVSS3BaseMetric
+            if entity_type == "CVSS2BaseMetric":
+                return CVSS.CVSS2BaseMetric
         return URIRef(f"http://w3id.org/sepses/vocab/ref/{source}#{entity_type}")
 
     @staticmethod
@@ -210,11 +228,20 @@ class SepsesOntologyMapper:
         if source == "cve":
             return URIRef(f"http://w3id.org/sepses/resource/cve/{slugify(external_id, lowercase=False)}")
         if source == "cwe":
+            if entity_type == "WeaknessCatalog":
+                return URIRef(f"http://w3id.org/sepses/resource/cwe/catalog/{slugify(external_id)}")
             return URIRef(f"http://w3id.org/sepses/resource/cwe/{slugify(external_id, lowercase=False)}")
         if source == "cpe" and entity_type == "Vendor":
             return URIRef(f"http://w3id.org/sepses/resource/cpe/vendor/{slugify(external_id)}")
         if source == "cpe" and entity_type == "Product":
             return URIRef(f"http://w3id.org/sepses/resource/cpe/product/{slugify(external_id)}")
+        if source == "cpe" and entity_type == "CPE":
+            return URIRef(f"http://w3id.org/sepses/resource/cpe/{slugify(external_id, lowercase=False)}")
+        if source == "cvss":
+            if entity_type == "CVSS3BaseMetric":
+                return URIRef(f"http://w3id.org/sepses/resource/cvss/CVSS3BaseMetric/{external_id}")
+            if entity_type == "CVSS2BaseMetric":
+                return URIRef(f"http://w3id.org/sepses/resource/cvss/CVSS2BaseMetric/{external_id}")
         return URIRef(f"http://w3id.org/sepses/resource/{source}/{entity_type.lower()}/{slugify(external_id)}")
 
     @staticmethod
@@ -250,6 +277,21 @@ class SepsesOntologyMapper:
             "hasProductDistribution": ICSA.hasProductDistribution,
             "hasCompanyHeadquarter": ICSA.hasCompanyHeadquarter,
         }
+        cve_rel = {
+            "hasCWE": CVE.hasCWE,
+            "hasCPE": CVE.hasCPE,
+            "hasCVSS3BaseMetric": CVE.hasCVSS3BaseMetric,
+            "hasCVSS2BaseMetric": CVE.hasCVSS2BaseMetric,
+        }
+        cwe_rel = {
+            "hasCAPEC": CWE.hasCAPEC,
+            "hasRelatedWeakness": CWE.hasRelatedWeakness,
+            "isContainedInCatalog": CWE.isContainedInCatalog,
+        }
+        cpe_rel = {
+            "hasVendor": CPE.hasVendor,
+            "hasProduct": CPE.hasProduct,
+        }
         generic = {
             "sourceRef": ATTACK.hasSourceRef,
             "targetRef": ATTACK.hasTargetRef,
@@ -258,6 +300,9 @@ class SepsesOntologyMapper:
             capec_rel.get(rel.predicate)
             or attack_rel.get(rel.predicate)
             or icsa_rel.get(rel.predicate)
+            or cve_rel.get(rel.predicate)
+            or cwe_rel.get(rel.predicate)
+            or cpe_rel.get(rel.predicate)
             or generic.get(rel.predicate)
             or URIRef(f"http://w3id.org/sepses/vocab/ref/{source}#{rel.predicate}")
         )
@@ -271,6 +316,69 @@ class SepsesOntologyMapper:
     @staticmethod
     def generic_property(key: str) -> URIRef:
         return URIRef(f"http://w3id.org/sepses/vocab/ref/common#{slugify(key)}")
+
+    def _add_cve_properties(self, uri: URIRef, entity: ParsedEntity) -> None:
+        props = entity.properties
+        if props.get("issued"):
+            self.graph.add((uri, RDFLIB_DCTERMS.issued, Literal(props["issued"], datatype=XSD.dateTime)))
+        if props.get("modified"):
+            self.graph.add((uri, RDFLIB_DCTERMS.modified, Literal(props["modified"], datatype=XSD.dateTime)))
+
+    def _add_cwe_properties(self, uri: URIRef, entity: ParsedEntity) -> None:
+        props = entity.properties
+        simple_map = {
+            "abstraction": CWE.abstraction,
+            "structure": CWE.structure,
+            "status": CWE.status,
+            "extendedDescription": CWE.extendedDescription,
+            "likelihoodOfExploit": CWE.likelihoodOfExploit,
+        }
+        self._add_simple_literals(uri, props, simple_map)
+        self._add_list_literals(uri, props.get("backgroundDetails"), CWE.backgroundDetail)
+
+    def _add_cpe_properties(self, uri: URIRef, entity: ParsedEntity) -> None:
+        props = entity.properties
+        if entity.entity_type == "Vendor":
+            self._add_literal(uri, CPE.vendorName, props.get("vendorName"))
+        elif entity.entity_type == "Product":
+            self._add_literal(uri, CPE.productName, props.get("productName"))
+        elif entity.entity_type == "CPE":
+            simple_map = {
+                "cpe23": CPE.cpe23,
+                "part": CPE.part,
+                "version": CPE.version,
+                "update": CPE.update,
+                "edition": CPE.edition,
+                "language": CPE.language,
+                "softwareEdition": CPE.softwareEdition,
+                "targetSoftware": CPE.targetSoftware,
+                "targetHardware": CPE.targetHardware,
+                "other": CPE.other,
+            }
+            self._add_simple_literals(uri, props, simple_map)
+
+    def _add_cvss_properties(self, uri: URIRef, entity: ParsedEntity) -> None:
+        props = entity.properties
+        simple_map = {
+            "version": CVSS.version,
+            "vectorString": CVSS.vectorString,
+            "attackVector": CVSS.attackVector,
+            "attackComplexity": CVSS.attackComplexity,
+            "privilegesRequired": CVSS.privilegesRequired,
+            "userInteraction": CVSS.userInteraction,
+            "scope": CVSS.scope,
+            "confidentialityImpact": CVSS.confidentialityImpact,
+            "integrityImpact": CVSS.integrityImpact,
+            "availabilityImpact": CVSS.availabilityImpact,
+            "baseSeverity": CVSS.baseSeverity,
+            "severity": CVSS.severity,
+            "accessVector": CVSS.accessVector,
+            "accessComplexity": CVSS.accessComplexity,
+            "authentication": CVSS.authentication,
+        }
+        self._add_simple_literals(uri, props, simple_map)
+        if props.get("baseScore") is not None:
+            self.graph.add((uri, CVSS.baseScore, Literal(props["baseScore"], datatype=XSD.decimal)))
 
     def _add_simple_literals(self, uri: URIRef, props: dict[str, Any], mapping: dict[str, URIRef]) -> None:
         for key, predicate in mapping.items():

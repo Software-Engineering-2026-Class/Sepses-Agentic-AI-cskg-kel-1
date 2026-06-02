@@ -11,16 +11,19 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 def test_three_source_pipeline_generates_turtle(tmp_path):
     output = tmp_path / "out.ttl"
-    result = run_pipeline(
-        capec=str(FIXTURES / "capec_sample.xml"),
-        mitre_attack=str(FIXTURES / "attack_sample.json"),
-        icsa=str(FIXTURES / "icsa_sample.csv"),
+    raw_files = {
+        "capec": [FIXTURES / "capec_sample.xml"],
+        "attack": [FIXTURES / "attack_sample.json"],
+        "icsa": [FIXTURES / "icsa_sample.csv"],
+    }
+    exit_code = run_pipeline(
+        sources_to_fetch=None,
+        raw_files=raw_files,
         output=str(output),
     )
 
+    assert exit_code == 0
     assert output.exists()
-    assert result["entities"] >= 5
-    assert result["triples"] > 20
 
     ttl = output.read_text(encoding="utf-8")
     assert "CAPEC-66" in ttl
