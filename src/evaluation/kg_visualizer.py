@@ -1,14 +1,11 @@
 """
 kg_visualizer.py
-================
-Membuat chart dan diagram statistik Knowledge Graph SEPSES.
-Output: file PNG yang disimpan ke docs/evaluation/
-
-Letak file : src/evaluation/kg_visualizer.py
-Tugas      : Evaluasi statistik KG - visualisasi (Week 2)
-Author     : Mikail Achmad
+Generate semua visualisasi statistik KG SEPSES:
+bar chart, pie chart, grouped bar (link quality),
+coverage heatmap, dan summary table PNG.
 """
 
+from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,368 +13,341 @@ import matplotlib.patches as mpatches
 import seaborn as sns
 from loguru import logger
 
-# Import stats dataclass
 import sys
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-from src.evaluation.kg_evaluator import KGStats
-
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.evaluation.pre_kg_evaluator import KGStats
 
 # Konfigurasi visual
-
-SEPSES_COLORS = {
-    "primary":   "#2563EB",   # biru
-    "secondary": "#10B981",   # hijau
-    "warning":   "#F59E0B",   # kuning
-    "danger":    "#EF4444",   # merah
-    "neutral":   "#6B7280",   # abu
+COLORS = {
+    "CVE":           "#2563EB",
+    "CVSS":          "#10B981",
+    "CWE":           "#F59E0B",
+    "CPE":           "#8B5CF6",
+    "CAPEC":         "#EF4444",
+    "MITRE ATT&CK":  "#EC4899",
+    "ICSA Advisory": "#06B6D4",
 }
-
-# Warna per sumber data (konsisten di semua chart)
-SOURCE_COLORS = {
-    "CVE":          "#2563EB",
-    "CVSS":         "#10B981",
-    "CWE":          "#F59E0B",
-    "CPE":          "#8B5CF6",
-    "CAPEC":        "#EF4444",
-    "MITRE ATT&CK": "#EC4899",
-    "ICSA":         "#06B6D4",
-}
+C_LINKED   = "#10B981"
+C_MISSING  = "#EF4444"
+C_HEADER   = "#1E40AF"
+C_ROW_A    = "#EFF6FF"
+C_ROW_B    = "#FFFFFF"
 
 OUTPUT_DIR = Path("docs/evaluation")
 
 
-def _setup_style():
-    """Set style matplotlib yang konsisten."""
-    sns.set_theme(style="whitegrid", palette="muted")
+def _setup():
+    sns.set_theme(style="whitegrid")
     plt.rcParams.update({
         "figure.dpi": 150,
         "font.family": "sans-serif",
-        "axes.titlesize": 14,
-        "axes.labelsize": 11,
+        "axes.titlesize": 13,
+        "axes.labelsize": 10,
     })
 
 
-# Chart 1: Bar chart entitas per sumber data
+def _save(fig, path: Path) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, bbox_inches="tight")
+    plt.close(fig)
+    logger.success(f"Disimpan: {path}")
+    return path
 
-def plot_entities_per_source(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
-    """
-    Bar chart horizontal: jumlah entitas per sumber data.
 
-    Contoh output: docs/evaluation/chart_entities_per_source.png
-    """
-    _setup_style()
-
+# Chart 1 — Bar chart entitas per sumber
+def plot_entities_per_source(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
+    """Bar chart horizontal: jumlah entitas per sumber data."""
+    _setup()
     data = {
-        "CVE":          stats.cve_count,
-        "CVSS":         stats.cvss_count,
-        "CWE":          stats.cwe_count,
-        "CPE":          stats.cpe_count,
-        "CAPEC":        stats.capec_count,
-        "MITRE ATT&CK": stats.mitre_attack_count,
-        "ICSA":         stats.icsa_count,
+        "CVE":           stats.cve_count,
+        "CVSS":          stats.cvss_count,
+        "CWE":           stats.cwe_count,
+        "CPE":           stats.cpe_count,
+        "CAPEC":         stats.capec_count,
+        "MITRE ATT&CK":  stats.mitre_attack_count,
+        "ICSA Advisory": stats.icsa_count,
     }
-
-    df = pd.DataFrame(
-        list(data.items()),
-        columns=["Sumber", "Jumlah Entitas"]
-    ).sort_values("Jumlah Entitas", ascending=True)
-
-    colors = [SOURCE_COLORS.get(src, SEPSES_COLORS["primary"]) for src in df["Sumber"]]
+    df = (
+        pd.DataFrame(list(data.items()), columns=["Sumber", "Entitas"])
+        .sort_values("Entitas", ascending=True)
+    )
+    colors = [COLORS.get(s, "#6B7280") for s in df["Sumber"]]
+    max_val = df["Entitas"].max() or 1
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.barh(df["Sumber"], df["Jumlah Entitas"], color=colors, edgecolor="white")
-
-    # Label nilai di ujung bar
+    bars = ax.barh(df["Sumber"], df["Entitas"], color=colors, edgecolor="white")
     for bar in bars:
-        width = bar.get_width()
+        w = bar.get_width()
         ax.text(
-            width + max(df["Jumlah Entitas"]) * 0.01,
+            w + max_val * 0.01,
             bar.get_y() + bar.get_height() / 2,
-            f"{int(width):,}",
-            va="center",
-            fontsize=9,
+            f"{int(w):,}", va="center", fontsize=9,
         )
-
-    ax.set_title("Jumlah Entitas per Sumber Data - SEPSES CSKG", fontweight="bold", pad=15)
+    ax.set_title("Jumlah Entitas per Sumber Data — SEPSES CSKG", fontweight="bold", pad=14)
     ax.set_xlabel("Jumlah Entitas")
-    ax.set_xlim(0, max(df["Jumlah Entitas"]) * 1.15)
+    ax.set_xlim(0, max_val * 1.18)
     ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return _save(fig, out / "chart_1_entities_per_source.png")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "chart_entities_per_source.png"
-    plt.tight_layout()
-    plt.savefig(output_path)
-    plt.close()
-
-    logger.success(f"Chart disimpan: {output_path}")
-    return output_path
-
-
-# Chart 2: Pie chart distribusi sumber data
-
-def plot_source_distribution_pie(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
-    """
-    Pie chart: distribusi proporsi entitas dari setiap sumber data.
-    """
-    _setup_style()
-
-    data = {
-        "CVE":          stats.cve_count,
-        "CVSS":         stats.cvss_count,
-        "CWE":          stats.cwe_count,
-        "CPE":          stats.cpe_count,
-        "CAPEC":        stats.capec_count,
-        "MITRE ATT&CK": stats.mitre_attack_count,
-        "ICSA":         stats.icsa_count,
-    }
-    # Hapus sumber yang 0 agar pie tidak berantakan
-    data = {k: v for k, v in data.items() if v > 0}
+# Chart 2 — Pie chart distribusi sumber
+def plot_source_distribution(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
+    """Pie chart distribusi proporsi entitas per sumber."""
+    _setup()
+    data = {k: v for k, v in {
+        "CVE":           stats.cve_count,
+        "CVSS":          stats.cvss_count,
+        "CWE":           stats.cwe_count,
+        "CPE":           stats.cpe_count,
+        "CAPEC":         stats.capec_count,
+        "MITRE ATT&CK":  stats.mitre_attack_count,
+        "ICSA Advisory": stats.icsa_count,
+    }.items() if v > 0}
 
     labels = list(data.keys())
     sizes  = list(data.values())
-    colors = [SOURCE_COLORS.get(k, "#6B7280") for k in labels]
+    colors = [COLORS.get(k, "#6B7280") for k in labels]
 
     fig, ax = plt.subplots(figsize=(9, 7))
-    wedges, texts, autotexts = ax.pie(
-        sizes,
-        labels=None,
-        autopct=lambda p: f"{p:.1f}%" if p > 2 else "",
-        colors=colors,
-        startangle=140,
-        pctdistance=0.75,
+    wedges, _, autotexts = ax.pie(
+        sizes, autopct=lambda p: f"{p:.1f}%" if p > 2 else "",
+        colors=colors, startangle=140, pctdistance=0.75,
         wedgeprops={"linewidth": 1, "edgecolor": "white"},
     )
     for at in autotexts:
         at.set_fontsize(8)
-
     ax.legend(
         wedges,
         [f"{l} ({v:,})" for l, v in zip(labels, sizes)],
-        loc="lower right",
-        fontsize=9,
+        loc="lower right", fontsize=9,
     )
-    ax.set_title("Distribusi Entitas per Sumber Data", fontweight="bold", pad=15)
+    ax.set_title("Distribusi Entitas per Sumber Data", fontweight="bold", pad=14)
+    fig.tight_layout()
+    return _save(fig, out / "chart_2_source_distribution.png")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "chart_source_distribution.png"
-    plt.tight_layout()
-    plt.savefig(output_path)
-    plt.close()
-
-    logger.success(f"Chart disimpan: {output_path}")
-    return output_path
-
-
-# Chart 3: Grouped bar chart kualitas linking
-
-def plot_link_quality(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
-    """
-    Grouped bar chart: perbandingan entitas yang terlink vs tidak.
-    Menunjukkan kelengkapan hubungan antar sumber data.
-    """
-    _setup_style()
-
-    categories = ["CVE→CVSS", "CVE→CWE", "CVE→CPE", "CWE→CAPEC"]
-    linked     = [
-        stats.cve_with_cvss,
-        stats.cve_with_cwe,
-        stats.cve_with_cpe,
-        stats.cwe_with_capec,
+# Chart 3 — Grouped bar kualitas linking
+def plot_link_quality(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
+    """Grouped bar: linked vs not linked per relasi."""
+    _setup()
+    categories = ["CVE→CVSS", "CVE→CWE", "CVE→CPE", "CWE→CAPEC", "ATT&CK→CAPEC", "ICSA→CVE"]
+    linked = [
+        stats.cve_with_cvss, stats.cve_with_cwe, stats.cve_with_cpe,
+        stats.cwe_with_capec, stats.attack_with_capec, stats.icsa_with_cve,
     ]
     not_linked = [
         stats.missing_links.get("cve_tanpa_cvss", 0),
         stats.missing_links.get("cve_tanpa_cwe",  0),
         stats.missing_links.get("cve_tanpa_cpe",  0),
         stats.missing_links.get("cwe_tanpa_capec", 0),
+        0,   # ATT&CK→CAPEC: tidak ada data missing terpisah
+        stats.missing_links.get("icsa_tanpa_cve",  0),
     ]
 
-    x = range(len(categories))
-    width = 0.35
+    x = list(range(len(categories)))
+    w = 0.35
+    fig, ax = plt.subplots(figsize=(12, 6))
+    b1 = ax.bar([i - w / 2 for i in x], linked, w, label="Terlink ✓", color=C_LINKED, edgecolor="white")
+    b2 = ax.bar([i + w / 2 for i in x], not_linked, w, label="Tidak Terlink ✗", color=C_MISSING, edgecolor="white")
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bars1 = ax.bar(
-        [i - width / 2 for i in x], linked,
-        width, label="Terlink",
-        color=SEPSES_COLORS["secondary"], edgecolor="white"
-    )
-    bars2 = ax.bar(
-        [i + width / 2 for i in x], not_linked,
-        width, label="Tidak Terlink",
-        color=SEPSES_COLORS["danger"], edgecolor="white"
-    )
-
-    # Label nilai
-    for bar in bars1:
+    for bar in b1 + b2:
         h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, h + 50, f"{int(h):,}",
-                ha="center", va="bottom", fontsize=8)
-    for bar in bars2:
-        h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, h + 50, f"{int(h):,}",
-                ha="center", va="bottom", fontsize=8, color=SEPSES_COLORS["danger"])
+        if h > 0:
+            ax.text(
+                bar.get_x() + bar.get_width() / 2, h + max(linked + not_linked) * 0.008,
+                f"{int(h):,}", ha="center", va="bottom", fontsize=7.5,
+            )
 
-    ax.set_title("Kualitas Linking Antar Entitas - SEPSES CSKG", fontweight="bold", pad=15)
-    ax.set_xlabel("Relasi Antar Sumber")
+    ax.set_title("Kualitas Linking Antar Entitas — SEPSES CSKG", fontweight="bold", pad=14)
     ax.set_ylabel("Jumlah Entitas")
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(categories)
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories, fontsize=9)
     ax.legend()
     ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return _save(fig, out / "chart_3_link_quality.png")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "chart_link_quality.png"
-    plt.tight_layout()
-    plt.savefig(output_path)
-    plt.close()
-
-    logger.success(f"Chart disimpan: {output_path}")
-    return output_path
-
-
-# Chart 4: Summary table sebagai gambar
-
-def plot_summary_table(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> Path:
+# Chart 4 — Coverage heatmap (% linking per relasi)
+def plot_coverage_heatmap(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
     """
-    Render ringkasan statistik sebagai tabel gambar (PNG).
-    Berguna untuk ditempel langsung di laporan/README.
+    Heatmap persentase coverage linking.
+    Setiap sel menunjukkan % entitas yang berhasil ter-link.
     """
-    _setup_style()
+    _setup()
 
-    df = stats.to_dataframe()
+    def pct(linked, total):
+        return round(linked / total * 100, 1) if total > 0 else 0.0
 
-    fig, ax = plt.subplots(figsize=(9, len(df) * 0.45 + 1.5))
-    ax.axis("off")
-
-    # Warna baris bergantian per kategori
-    row_colors = []
-    cat_color_map = {
-        "Global":       ["#EFF6FF", "#DBEAFE"],
-        "Per Sumber":   ["#F0FDF4", "#DCFCE7"],
-        "Kualitas Link":["#FFF7ED", "#FFEDD5"],
+    coverage = {
+        "CVE→CVSS":      pct(stats.cve_with_cvss,    stats.cve_count),
+        "CVE→CWE":       pct(stats.cve_with_cwe,     stats.cve_count),
+        "CVE→CPE":       pct(stats.cve_with_cpe,     stats.cve_count),
+        "CWE→CAPEC":     pct(stats.cwe_with_capec,   stats.cwe_count),
+        "ATT&CK→CAPEC":  pct(stats.attack_with_capec, stats.mitre_attack_count),
+        "ICSA→CVE":      pct(stats.icsa_with_cve,    stats.icsa_count),
     }
-    cat_idx = {}
+
+    df = pd.DataFrame(
+        list(coverage.values()),
+        index=list(coverage.keys()),
+        columns=["Coverage (%)"],
+    )
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    sns.heatmap(
+        df, annot=True, fmt=".1f", cmap="YlGn",
+        vmin=0, vmax=100, linewidths=0.5,
+        annot_kws={"size": 11, "weight": "bold"},
+        ax=ax,
+    )
+    ax.set_title("Coverage Linking (%)\nper Relasi Antar Sumber Data",
+                 fontweight="bold", pad=12)
+    ax.set_xlabel("")
+    ax.tick_params(axis="y", labelsize=9, rotation=0)
+    fig.tight_layout()
+    return _save(fig, out / "chart_4_coverage_heatmap.png")
+
+# Chart 5 — Missing links bar chart
+def plot_missing_links(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
+    """Bar chart jumlah missing links per tipe."""
+    _setup()
+    ml = stats.missing_links
+    if not ml:
+        logger.info("Tidak ada data missing links, skip chart.")
+        return None
+
+    labels = {
+        "cve_tanpa_cvss":   "CVE tanpa CVSS",
+        "cve_tanpa_cwe":    "CVE tanpa CWE",
+        "cve_tanpa_cpe":    "CVE tanpa CPE",
+        "cwe_tanpa_capec":  "CWE tanpa CAPEC",
+        "icsa_tanpa_cve":   "ICSA tanpa CVE",
+    }
+    data = {labels[k]: ml.get(k, 0) for k in labels}
+    df = pd.DataFrame(list(data.items()), columns=["Tipe", "Jumlah"])
+    df = df[df["Jumlah"] > 0].sort_values("Jumlah", ascending=False)
+
+    if df.empty:
+        logger.info("Semua linking lengkap, skip missing links chart.")
+        return None
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    bars = ax.bar(df["Tipe"], df["Jumlah"], color=C_MISSING, edgecolor="white")
+    for bar in bars:
+        h = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, h + df["Jumlah"].max() * 0.01,
+                f"{int(h):,}", ha="center", va="bottom", fontsize=9)
+    ax.set_title("Missing Links per Tipe Relasi — SEPSES CSKG", fontweight="bold", pad=14)
+    ax.set_ylabel("Jumlah Entitas Tanpa Link")
+    ax.tick_params(axis="x", labelsize=9, rotation=10)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    return _save(fig, out / "chart_5_missing_links.png")
+
+# Chart 6 — Summary table PNG
+def plot_summary_table(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
+    """Render tabel ringkasan statistik sebagai PNG."""
+    _setup()
+    df = stats.to_dataframe()
+    df["Nilai"] = df["Nilai"].apply(lambda x: f"{int(x):,}")
+
+    row_colors = []
+    cat_parity = {}
+    cat_color = {
+        "Global":        [C_ROW_A, C_ROW_B],
+        "Per Sumber":    ["#F0FDF4", "#DCFCE7"],
+        "Kualitas Link": ["#FFF7ED", "#FFEDD5"],
+    }
     for _, row in df.iterrows():
         cat = row["Kategori"]
-        idx = cat_idx.get(cat, 0)
-        colors_for_cat = cat_color_map.get(cat, ["#F9FAFB", "#F3F4F6"])
-        row_colors.append([colors_for_cat[idx % 2]] * 3)
-        cat_idx[cat] = idx + 1
+        i = cat_parity.get(cat, 0)
+        c = cat_color.get(cat, [C_ROW_A, C_ROW_B])[i % 2]
+        row_colors.append([c] * 3)
+        cat_parity[cat] = i + 1
 
-    table = ax.table(
-        cellText=df.values,
-        colLabels=df.columns,
-        cellLoc="center",
-        loc="center",
-        cellColours=row_colors,
+    fig, ax = plt.subplots(figsize=(10, len(df) * 0.42 + 1.6))
+    ax.axis("off")
+    tbl = ax.table(
+        cellText=df.values, colLabels=df.columns,
+        cellLoc="center", loc="center", cellColours=row_colors,
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    table.scale(1.2, 1.4)
-
-    # Style header
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.scale(1.15, 1.4)
     for j in range(len(df.columns)):
-        table[0, j].set_facecolor(SEPSES_COLORS["primary"])
-        table[0, j].set_text_props(color="white", fontweight="bold")
-
+        cell = tbl[0, j]
+        cell.set_facecolor(C_HEADER)
+        cell.set_text_props(color="white", fontweight="bold")
     ax.set_title(
         "Ringkasan Statistik Knowledge Graph SEPSES",
-        fontweight="bold", pad=10, fontsize=13
+        fontweight="bold", pad=10, fontsize=12,
     )
+    fig.tight_layout()
+    return _save(fig, out / "table_kg_summary.png")
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "table_kg_summary.png"
-    plt.tight_layout()
-    plt.savefig(output_path, bbox_inches="tight")
-    plt.close()
-
-    logger.success(f"Tabel disimpan: {output_path}")
-    return output_path
-
-
-# Generate semua visualisasi sekaligus
-
-def generate_all_visualizations(stats: KGStats, output_dir: Path = OUTPUT_DIR) -> list[Path]:
+# Generate semua
+def generate_all(stats: KGStats, out: Path = OUTPUT_DIR) -> list[Path]:
     """
     Generate semua chart dan tabel sekaligus.
 
     Parameters
     ----------
-    stats : KGStats
-        Hasil dari KGEvaluator.run_full_evaluation()
-    output_dir : Path
-        Direktori output, default: docs/evaluation/
+    stats : KGStats  — hasil KGEvaluator.run_full_evaluation()
+    out   : Path     — direktori output (default: docs/evaluation/)
 
     Returns
     -------
-    list[Path]
-        List path ke semua file yang dibuat.
+    list[Path]  — path ke semua file yang dihasilkan
     """
-    logger.info("=== GENERATE SEMUA VISUALISASI ===")
+    logger.info("GENERATE SEMUA VISUALISASI")
     outputs = []
-    outputs.append(plot_entities_per_source(stats, output_dir))
-    outputs.append(plot_source_distribution_pie(stats, output_dir))
-    outputs.append(plot_link_quality(stats, output_dir))
-    outputs.append(plot_summary_table(stats, output_dir))
-    logger.success(f"Semua visualisasi selesai. Disimpan di: {output_dir}")
+    for fn in [
+        plot_entities_per_source,
+        plot_source_distribution,
+        plot_link_quality,
+        plot_coverage_heatmap,
+        plot_missing_links,
+        plot_summary_table,
+    ]:
+        result = fn(stats, out)
+        if result:
+            outputs.append(result)
+    logger.success(f"{len(outputs)} visualisasi disimpan di: {out}")
     return outputs
 
-
-# Demo mode (pakai data dummy jika endpoint belum siap)
-
+# Demo mode
 def _demo_stats() -> KGStats:
-    """Buat KGStats dengan data dummy untuk keperluan testing visual."""
-    stats = KGStats(
-        total_triples=2_845_912,
-        total_entities=198_234,
-        total_relations=47,
-        cve_count=120_000,
-        cvss_count=95_000,
-        cwe_count=900,
-        cpe_count=75_000,
-        capec_count=550,
-        mitre_attack_count=600,
+    from src.evaluation.pre_kg_evaluator import KGStats
+    return KGStats(
+        total_triples=2_845_912, total_entities=198_234,
+        total_relations=47,      total_classes=18,
+        cve_count=120_000,       cvss_count=95_000,
+        cwe_count=900,           cpe_count=75_000,
+        capec_count=550,         mitre_attack_count=600,
         icsa_count=800,
-        cve_with_cvss=88_000,
-        cve_with_cwe=72_000,
-        cve_with_cpe=60_000,
-        cwe_with_capec=320,
+        cve_with_cvss=88_000,    cve_with_cwe=72_000,
+        cve_with_cpe=60_000,     cwe_with_capec=320,
+        attack_with_capec=410,   icsa_with_cve=620,
         missing_links={
-            "cve_tanpa_cvss": 32_000,
-            "cve_tanpa_cwe":  48_000,
-            "cve_tanpa_cpe":  60_000,
-            "cwe_tanpa_capec": 580,
+            "cve_tanpa_cvss":  32_000, "cve_tanpa_cwe":  48_000,
+            "cve_tanpa_cpe":   60_000, "cwe_tanpa_capec": 580,
+            "icsa_tanpa_cve":  180,
         },
+        anomalies=[],
     )
-    return stats
-
 
 if __name__ == "__main__":
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Generate visualisasi statistik Knowledge Graph SEPSES"
-    )
-    parser.add_argument(
-        "--demo",
-        action="store_true",
-        help="Jalankan dengan data dummy (tanpa koneksi endpoint)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="docs/evaluation",
-        help="Direktori output untuk chart (default: docs/evaluation)",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--demo",       action="store_true")
+    parser.add_argument("--output-dir", default="docs/evaluation")
     args = parser.parse_args()
 
     if args.demo:
-        logger.info("Mode demo aktif — menggunakan data dummy.")
-        stats = _demo_stats()
+        logger.info("Mode demo aktif — data dummy.")
+        s = _demo_stats()
     else:
         from src.sparql.sparql_client import SparqlClient
-        from src.evaluation.kg_evaluator import KGEvaluator
-        client    = SparqlClient()
-        evaluator = KGEvaluator(client)
-        stats     = evaluator.run_full_evaluation()
+        from src.evaluation.pre_kg_evaluator import KGEvaluator
+        s = KGEvaluator(SparqlClient()).run_full_evaluation()
 
-    generate_all_visualizations(stats, output_dir=Path(args.output_dir))
+    generate_all(s, Path(args.output_dir))

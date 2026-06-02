@@ -1,11 +1,7 @@
 """
 test_evaluation.py
-==================
-Unit test untuk modul evaluation system.
-Menggunakan mock agar tidak butuh endpoint aktif saat testing.
-
-Letak file : tests/test_evaluation.py
-Author     : Mikail Achmad
+Unit test untuk seluruh modul evaluation system.
+Menggunakan mock, tidak butuh Qlever aktif saat testing.
 """
 
 import sys
@@ -17,180 +13,282 @@ matplotlib.use("Agg")
 
 import pytest
 
-# Tambahkan root ke path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.sparql.sparql_client import SparqlClient
-from src.evaluation.kg_evaluator import KGEvaluator, KGStats
-
+from src.evaluation.pre_kg_evaluator import KGEvaluator, KGStats
 
 # Fixtures
-
 @pytest.fixture
 def mock_client() -> SparqlClient:
-    """SparqlClient dengan endpoint di-mock (tidak butuh server aktif)."""
-    client = SparqlClient(endpoint_url="http://localhost:7001/sparql")
-    return client
-
+    return SparqlClient(endpoint_url="http://localhost:7001/sparql")
 
 @pytest.fixture
-def sample_stats() -> KGStats:
-    """KGStats dengan data dummy untuk testing visualisasi."""
+def full_stats() -> KGStats:
+    """KGStats dengan data realistis untuk semua test."""
     return KGStats(
-        total_triples=100_000,
-        total_entities=50_000,
-        total_relations=30,
-        cve_count=30_000,
-        cvss_count=25_000,
-        cwe_count=500,
-        cpe_count=20_000,
-        capec_count=200,
-        mitre_attack_count=300,
-        icsa_count=150,
-        cve_with_cvss=20_000,
-        cve_with_cwe=18_000,
-        cve_with_cpe=15_000,
-        cwe_with_capec=100,
+        total_triples=500_000,
+        total_entities=80_000,
+        total_relations=42,
+        total_classes=18,
+        cve_count=50_000,
+        cvss_count=45_000,
+        cwe_count=800,
+        cpe_count=30_000,
+        capec_count=400,
+        mitre_attack_count=500,
+        icsa_count=600,
+        cve_with_cvss=40_000,
+        cve_with_cwe=35_000,
+        cve_with_cpe=25_000,
+        cwe_with_capec=250,
+        attack_with_capec=320,
+        icsa_with_cve=480,
         missing_links={
             "cve_tanpa_cvss":   10_000,
-            "cve_tanpa_cwe":    12_000,
-            "cve_tanpa_cpe":    15_000,
-            "cwe_tanpa_capec":  400,
+            "cve_tanpa_cwe":    15_000,
+            "cve_tanpa_cpe":    25_000,
+            "cwe_tanpa_capec":  550,
+            "icsa_tanpa_cve":   120,
         },
+        anomalies=[],
+        errors=[],
     )
 
 
-# Test KGStats
+@pytest.fixture
+def empty_stats() -> KGStats:
+    return KGStats()
 
+# KGStats tests
 class TestKGStats:
 
-    def test_to_dataframe_has_correct_columns(self, sample_stats):
-        df = sample_stats.to_dataframe()
-        assert "Metrik" in df.columns
-        assert "Nilai" in df.columns
-        assert "Kategori" in df.columns
+    def test_to_dataframe_columns(self, full_stats):
+        df = full_stats.to_dataframe()
+        assert set(["Metrik", "Nilai", "Kategori"]).issubset(df.columns)
 
-    def test_to_dataframe_not_empty(self, sample_stats):
-        df = sample_stats.to_dataframe()
-        assert len(df) > 0
+    def test_to_dataframe_has_all_categories(self, full_stats):
+        cats = full_stats.to_dataframe()["Kategori"].unique().tolist()
+        assert "Global"         in cats
+        assert "Per Sumber"     in cats
+        assert "Kualitas Link"  in cats
 
-    def test_to_dataframe_categories(self, sample_stats):
-        df = sample_stats.to_dataframe()
-        categories = df["Kategori"].unique().tolist()
-        assert "Global" in categories
-        assert "Per Sumber" in categories
-        assert "Kualitas Link" in categories
+    def test_to_dataframe_row_count(self, full_stats):
+        # 4 global + 7 sumber + 6 link = 17 baris
+        assert len(full_stats.to_dataframe()) == 17
 
-    def test_to_dict_contains_all_fields(self, sample_stats):
-        d = sample_stats.to_dict()
-        assert "total_triples" in d
-        assert "cve_count" in d
-        assert "missing_links" in d
+    def test_missing_links_dataframe(self, full_stats):
+        df = full_stats.missing_links_dataframe()
+        assert "Missing Link" in df.columns
+        assert len(df) == 5
 
-    def test_total_triples_positive(self, sample_stats):
-        assert sample_stats.total_triples > 0
+    def test_coverage_percent_normal(self, full_stats):
+        assert full_stats.coverage_percent(80, 100) == 80.0
 
-    def test_missing_links_keys(self, sample_stats):
-        keys = list(sample_stats.missing_links.keys())
-        assert "cve_tanpa_cvss" in keys
-        assert "cve_tanpa_cwe" in keys
+    def test_coverage_percent_zero_total(self, full_stats):
+        assert full_stats.coverage_percent(10, 0) == 0.0
+
+    def test_coverage_percent_full(self, full_stats):
+        assert full_stats.coverage_percent(100, 100) == 100.0
+
+    def test_to_dict_has_all_keys(self, full_stats):
+        d = full_stats.to_dict()
+        for key in ["total_triples", "cve_count", "missing_links", "errors", "anomalies"]:
+            assert key in d
+
+    def test_empty_stats_all_zero(self, empty_stats):
+        assert empty_stats.total_triples == 0
+        assert empty_stats.cve_count == 0
+        assert empty_stats.missing_links == {}
 
 
-# Test KGEvaluator (dengan mock)
-
+# KGEvaluator tests
 class TestKGEvaluator:
 
-    def test_run_full_evaluation_returns_kgstats(self, mock_client):
-        """Evaluasi harus mengembalikan KGStats meski endpoint tidak aktif."""
-        # Mock ping agar selalu return False (simulasi endpoint mati)
+    def test_ping_failure_returns_kgstats_with_error(self, mock_client):
         mock_client.ping = MagicMock(return_value=False)
-        evaluator = KGEvaluator(mock_client)
-        stats = evaluator.run_full_evaluation()
+        ev = KGEvaluator(mock_client)
+        stats = ev.run_full_evaluation()
         assert isinstance(stats, KGStats)
-        # Jika ping gagal, errors harus ada
         assert len(stats.errors) > 0
 
-    def test_run_count_query_returns_zero_on_empty(self, mock_client):
-        """Query yang mengembalikan hasil kosong harus menghasilkan 0."""
+    def test_count_returns_zero_on_empty_result(self, mock_client):
         mock_client.query = MagicMock(return_value=[])
-        evaluator = KGEvaluator(mock_client)
-        result = evaluator._run_count_query("SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }")
+        ev = KGEvaluator(mock_client)
+        result = ev._count("total_triples")
         assert result == 0
 
-    def test_run_count_query_parses_correctly(self, mock_client):
-        """Query yang sukses harus di-parse jadi integer."""
-        mock_client.query = MagicMock(return_value=[{"n": {"value": "42500"}}])
-        evaluator = KGEvaluator(mock_client)
-        result = evaluator._run_count_query("SELECT (COUNT(*) AS ?n) WHERE { ?s ?p ?o }")
-        assert result == 42500
+    def test_count_parses_integer_correctly(self, mock_client):
+        mock_client.query = MagicMock(return_value=[{"n": {"value": "12345"}}])
+        ev = KGEvaluator(mock_client)
+        result = ev._count("total_triples")
+        assert result == 12345
 
-    def test_find_missing_links_returns_dict(self, mock_client):
-        """find_missing_links harus mengembalikan dict."""
+    def test_count_handles_exception_gracefully(self, mock_client):
+        mock_client.query = MagicMock(side_effect=Exception("connection refused"))
+        ev = KGEvaluator(mock_client)
+        result = ev._count("total_triples")
+        assert result == 0
+
+    def test_run_section_returns_dict(self, mock_client):
         mock_client.query = MagicMock(return_value=[{"n": {"value": "100"}}])
-        evaluator = KGEvaluator(mock_client)
-        result = evaluator.find_missing_links()
+        ev = KGEvaluator(mock_client)
+        result = ev._run_section(["cve_count", "cwe_count"])
         assert isinstance(result, dict)
-        assert "cve_tanpa_cvss" in result
+        assert "cve_count" in result
+        assert "cwe_count" in result
 
-    def test_save_stats_csv(self, sample_stats, mock_client, tmp_path):
-        """Simpan CSV harus membuat file di path yang ditentukan."""
-        evaluator = KGEvaluator(mock_client)
-        csv_path = tmp_path / "test_kg_stats.csv"
-        evaluator.save_stats_csv(sample_stats, csv_path)
+    def test_find_missing_links_keys(self, mock_client):
+        mock_client.query = MagicMock(return_value=[{"n": {"value": "0"}}])
+        ev = KGEvaluator(mock_client)
+        missing = ev._run_section([
+            "cve_tanpa_cvss", "cve_tanpa_cwe", "cve_tanpa_cpe",
+            "cwe_tanpa_capec", "icsa_tanpa_cve"
+        ])
+        for k in ["cve_tanpa_cvss", "cve_tanpa_cwe", "cve_tanpa_cpe"]:
+            assert k in missing
+
+    def test_check_anomalies_empty_source(self, mock_client, full_stats):
+        ev = KGEvaluator(mock_client)
+        full_stats.cve_count = 0   # simulasi CVE tidak ter-parse
+        anomalies = ev.check_anomalies(full_stats)
+        assert any("CVE" in a for a in anomalies)
+
+    def test_check_anomalies_low_coverage(self, mock_client, full_stats):
+        ev = KGEvaluator(mock_client)
+        full_stats.cve_count     = 10_000
+        full_stats.cve_with_cvss = 1_000   # hanya 10%
+        anomalies = ev.check_anomalies(full_stats)
+        assert any("CVSS" in a for a in anomalies)
+
+    def test_check_anomalies_clean_data(self, mock_client, full_stats):
+        ev = KGEvaluator(mock_client)
+        # Data normal, tidak ada anomali
+        anomalies = ev.check_anomalies(full_stats)
+        assert isinstance(anomalies, list)
+
+    def test_save_csv_creates_file(self, mock_client, full_stats, tmp_path):
+        ev = KGEvaluator(mock_client)
+        csv_path = tmp_path / "stats.csv"
+        ev.save_csv(full_stats, csv_path)
         assert csv_path.exists()
+
+    def test_save_csv_readable(self, mock_client, full_stats, tmp_path):
         import pandas as pd
+        ev = KGEvaluator(mock_client)
+        csv_path = tmp_path / "stats.csv"
+        ev.save_csv(full_stats, csv_path)
         df = pd.read_csv(csv_path)
         assert len(df) > 0
+        assert "Metrik" in df.columns
 
+    def test_save_missing_links_csv(self, mock_client, full_stats, tmp_path):
+        import pandas as pd
+        ev = KGEvaluator(mock_client)
+        csv_path = tmp_path / "missing.csv"
+        ev.save_missing_links_csv(full_stats, csv_path)
+        assert csv_path.exists()
+        df = pd.read_csv(csv_path)
+        assert "Missing Link" in df.columns
 
-# Test SparqlClient
-
+# SparqlClient tests
 class TestSparqlClient:
 
-    def test_default_endpoint_url(self):
-        client = SparqlClient()
-        assert "localhost" in client.endpoint_url
+    def test_default_endpoint(self):
+        c = SparqlClient()
+        assert "7001" in c.endpoint_url
 
-    def test_ping_fails_gracefully_on_no_server(self, mock_client):
-        """Ping ke server yang tidak ada harus return False, bukan exception."""
+    def test_custom_endpoint(self):
+        c = SparqlClient(endpoint_url="http://example.com:8080/sparql")
+        assert "8080" in c.endpoint_url
+
+    def test_ping_returns_bool_no_server(self, mock_client):
         result = mock_client.ping(retries=1, delay=0)
         assert isinstance(result, bool)
 
-    def test_query_returns_list(self, mock_client):
-        """query() harus selalu mengembalikan list, termasuk saat error."""
-        # Tanpa server aktif, harus return []
+    def test_query_returns_list_no_server(self, mock_client):
         result = mock_client.query("SELECT ?s WHERE { ?s ?p ?o } LIMIT 1")
         assert isinstance(result, list)
 
-    def test_load_turtle_file_missing_file(self, mock_client, tmp_path):
-        """Load file yang tidak ada harus return False tanpa crash."""
-        fake_path = tmp_path / "tidak_ada.ttl"
-        result = mock_client.load_turtle_file(fake_path)
+    def test_count_triples_returns_int(self, mock_client):
+        mock_client.query = MagicMock(return_value=[{"count": {"value": "999"}}])
+        result = mock_client.count_triples()
+        assert isinstance(result, int)
+
+    def test_load_turtle_missing_file(self, mock_client, tmp_path):
+        result = mock_client.load_turtle_file(tmp_path / "ghost.ttl")
         assert result is False
 
-    def test_load_all_turtle_files_empty_dir(self, mock_client, tmp_path):
-        """Load dari direktori kosong harus return sukses=[] dan gagal=[]."""
+    def test_load_all_empty_dir(self, mock_client, tmp_path):
         result = mock_client.load_all_turtle_files(rdf_dir=tmp_path)
         assert result["sukses"] == []
         assert result["gagal"] == []
 
+    def test_load_all_nonexistent_dir(self, mock_client):
+        result = mock_client.load_all_turtle_files(rdf_dir=Path("/tidak/ada"))
+        assert result["sukses"] == []
 
-# Test Visualizer (smoke test — pastikan tidak crash)
-
+# Visualizer smoke tests
 class TestKGVisualizer:
 
-    def test_all_charts_run_without_error(self, sample_stats, tmp_path):
-        """Semua fungsi visualisasi harus bisa jalan tanpa exception."""
-        from src.evaluation.kg_visualizer import generate_all_visualizations
-        outputs = generate_all_visualizations(sample_stats, output_dir=tmp_path)
-        assert len(outputs) == 4
-        for path in outputs:
-            assert Path(path).exists()
+    def test_all_charts_generate_without_error(self, full_stats, tmp_path):
+        from src.evaluation.pre_kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        assert len(outputs) >= 5
 
-    def test_output_files_are_png(self, sample_stats, tmp_path):
-        """File output harus berformat PNG."""
-        from src.evaluation.kg_visualizer import generate_all_visualizations
-        outputs = generate_all_visualizations(sample_stats, output_dir=tmp_path)
-        for path in outputs:
-            assert str(path).endswith(".png")
+    def test_output_files_are_png(self, full_stats, tmp_path):
+        from src.evaluation.pre_kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        for p in outputs:
+            assert str(p).endswith(".png"), f"Bukan PNG: {p}"
+
+    def test_output_files_exist(self, full_stats, tmp_path):
+        from src.evaluation.pre_kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        for p in outputs:
+            assert Path(p).exists()
+
+    def test_empty_missing_links_skips_chart5(self, full_stats, tmp_path):
+        from src.evaluation.pre_kg_visualizer import plot_missing_links
+        full_stats.missing_links = {}
+        result = plot_missing_links(full_stats, out=tmp_path)
+        assert result is None   # skip karena tidak ada data
+
+# Report generator tests
+class TestReportGenerator:
+
+    def test_report_creates_file(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        assert out.exists()
+
+    def test_report_contains_sections(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text()
+        for section in [
+            "Ringkasan Global",
+            "Entitas per Sumber",
+            "Kualitas Linking",
+            "Missing Links",
+            "Kesimpulan",
+        ]:
+            assert section in content, f"Section '{section}' tidak ada di laporan"
+
+    def test_report_contains_triple_count(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text()
+        assert "500,000" in content or "500000" in content
+
+    def test_report_anomaly_section(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        full_stats.anomalies = ["[ANOMALI] CVE memiliki 0 entitas"]
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text()
+        assert "Anomali" in content
