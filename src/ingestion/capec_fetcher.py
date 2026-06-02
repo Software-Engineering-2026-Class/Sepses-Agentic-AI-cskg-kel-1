@@ -1,6 +1,6 @@
-"""CWE fetcher — downloads the CWE XML archive from MITRE.
+"""CAPEC fetcher — downloads the CAPEC XML catalogue from MITRE.
 
-Source: https://cwe.mitre.org/data/xml/cwec_latest.xml.zip
+Source: https://capec.mitre.org/data/xml/capec_latest.xml
 """
 
 from __future__ import annotations
@@ -13,27 +13,26 @@ from loguru import logger
 from .base_fetcher import BaseFetcher
 
 
-class CWEFetcher(BaseFetcher):
-    """Fetch the CWE catalogue (XML, zipped) from MITRE."""
+class CAPECFetcher(BaseFetcher):
+    """Fetch the CAPEC catalogue (XML) from MITRE."""
 
-    source_name = "cwe"
+    source_name = "capec"
 
-    CWE_URL = "https://cwe.mitre.org/data/xml/cwec_latest.xml.zip"
+    CAPEC_URL = "https://capec.mitre.org/data/xml/capec_latest.xml"
 
     def fetch(self) -> dict[str, Any]:
         try:
             filepath = self.download_file(
-                url=self.CWE_URL,
-                filename="cwec_latest.xml.zip",
-                extract_zip=True,
+                url=self.CAPEC_URL,
+                filename="capec_latest.xml",
             )
             return self._make_result(
                 status="ok",
                 files=[filepath.name],
-                message="Downloaded and extracted CWE XML archive.",
+                message="Downloaded CAPEC XML catalogue.",
             )
         except Exception as exc:
-            logger.error("[cwe] fetch failed: {}", exc)
+            logger.error("[capec] fetch failed: {}", exc)
             return self._make_result(
                 status="error",
                 files=[],

@@ -114,6 +114,65 @@ pip install -r requirements.txt
 
 ---
 
+## Data Fetching
+
+Fetch all cybersecurity data sources into `data/raw/`:
+
+```bash
+python scripts/fetch_all_sources.py
+```
+
+### CLI Options
+
+```bash
+# Force re-download even if cached files exist
+python scripts/fetch_all_sources.py --force
+
+# Fetch only specific sources
+python scripts/fetch_all_sources.py --sources nvd cwe capec
+
+# Limit NVD/CPE records (useful for development/testing)
+python scripts/fetch_all_sources.py --max-nvd 500
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NVD_API_KEY` | Optional | NVD API key for higher rate limits (50 req/30s vs 5 req/30s) |
+
+Set via `.env` file or shell:
+
+```bash
+export NVD_API_KEY=your-api-key-here  # Linux/macOS
+set NVD_API_KEY=your-api-key-here     # Windows CMD
+$env:NVD_API_KEY="your-api-key-here"  # PowerShell
+```
+
+### Data Sources & Output Directories
+
+| Source | Output Directory | Description |
+|--------|-----------------|-------------|
+| NVD (CVE+CVSS) | `data/raw/nvd/` | CVE records with embedded CVSS scores (NVD API 2.0) |
+| CWE | `data/raw/cwe/` | CWE XML catalogue from MITRE |
+| CAPEC | `data/raw/capec/` | CAPEC XML from MITRE |
+| CPE | `data/raw/cpe/` | CPE dictionary entries (NVD API 2.0) |
+| MITRE ATT&CK | `data/raw/attack/` | Enterprise + ICS STIX bundles |
+| ICSA | `data/raw/icsa/` | ICS-CERT advisories from CISA |
+
+### Fetch Report
+
+After fetching, a summary report is written to:
+
+```
+data/reports/fetch_report.json
+```
+
+Each downloaded file also has a `.meta.json` sidecar with provenance
+(timestamp, source URL, file size, SHA-256 checksum).
+
+---
+
 ## Branching Strategy
 
 To maintain collaboration quality, development is organized using feature branches.

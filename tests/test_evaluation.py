@@ -7,6 +7,10 @@ Menggunakan mock, tidak butuh Qlever aktif saat testing.
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import matplotlib
+matplotlib.use("Agg")
+
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]

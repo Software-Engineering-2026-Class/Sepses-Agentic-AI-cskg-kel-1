@@ -146,9 +146,8 @@ def plot_link_quality(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
     x = list(range(len(categories)))
     w = 0.35
     fig, ax = plt.subplots(figsize=(12, 6))
-
-    b1 = ax.bar([i - w/2 for i in x], linked,     w, label="Terlink ✓",      color=C_LINKED,  edgecolor="white")
-    b2 = ax.bar([i + w/2 for i in x], not_linked, w, label="Tidak Terlink ✗", color=C_MISSING, edgecolor="white")
+    b1 = ax.bar([i - w / 2 for i in x], linked, w, label="Terlink ✓", color=C_LINKED, edgecolor="white")
+    b2 = ax.bar([i + w / 2 for i in x], not_linked, w, label="Tidak Terlink ✗", color=C_MISSING, edgecolor="white")
 
     for bar in b1 + b2:
         h = bar.get_height()

@@ -1,0 +1,17 @@
+# Use Case 1: Vulnerability Assessment
+# Find CVEs affecting a product/CPE and their severity if available.
+
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cpe: <http://w3id.org/sepses/vocab/ref/cpe#>
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?cveId ?productName ?cvssScore ?severity WHERE {
+  ?icsa a icsa:ICSA ;
+        icsa:hasProduct ?product ;
+        icsa:hasCVE ?cve ;
+        icsa:CVSSScore ?cvssScore ;
+        icsa:CVSSSeverity ?severity .
+  ?cve dcterms:identifier ?cveId .
+  ?product dcterms:identifier ?productName .
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Weakness_Catalog Name="CWE" Version="4.14" Date="2024-02-29" xmlns="http://cwe.mitre.org/cwe-7">
+  <Weaknesses>
+    <Weakness ID="89" Name="Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')" Abstraction="Class" Structure="Simple" Status="Incomplete">
+      <Description>The software constructs an SQL command...</Description>
+      <Extended_Description>This weakness commonly occurs in databases.</Extended_Description>
+      <Likelihood_Of_Exploit>High</Likelihood_Of_Exploit>
+      <Background_Details>
+        <Background_Detail>SQL injection is a major risk.</Background_Detail>
+      </Background_Details>
+      <Related_Attack_Patterns>
+        <Related_Attack_Pattern CAPEC_ID="66"/>
+      </Related_Attack_Patterns>
+      <Related_Weaknesses>
+        <Related_Weakness CWE_ID="74" Nature="ChildOf" View_ID="1000"/>
+      </Related_Weaknesses>
+    </Weakness>
+  </Weaknesses>
+</Weakness_Catalog>
