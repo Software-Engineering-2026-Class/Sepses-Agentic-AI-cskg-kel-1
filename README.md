@@ -260,17 +260,24 @@ Place raw files under:
 
 ```text
 data/raw/capec/
-data/raw/mitre_attack/
+data/raw/attack/
 data/raw/icsa/
 ```
 
 Example:
 
 ```bash
-python -m src.agentic_pipeline.run_pipeline   --capec data/raw/capec/capec.xml   --mitre-attack data/raw/mitre_attack/enterprise-attack.json   --icsa data/raw/icsa/icsa.csv   --output data/rdf_output/sepses_cskg.ttl
+python -m src.agentic_pipeline.run_pipeline   --capec data/raw/capec/capec.xml   --mitre-attack data/raw/attack/enterprise-attack.json   --icsa data/raw/icsa/icsa.csv   --output data/rdf_output/sepses_cskg.ttl
 ```
 
 You may pass a file or a directory to each source argument.
+
+## Pipeline Usage Guide (Issue #11)
+
+See the dedicated pipeline documentation for complete installation, configuration,
+execution commands, expected outputs, and known limitations:
+
+- [Pipeline Usage Guide](docs/pipeline-usage.md)
 
 ## Testing 
 
