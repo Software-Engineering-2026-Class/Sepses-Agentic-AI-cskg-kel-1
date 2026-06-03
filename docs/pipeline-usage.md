@@ -30,6 +30,12 @@ docker compose exec sepses-app python -m src.agentic_pipeline.run_pipeline --all
 | `OPENAI_API_KEY` | Optional | Enables optional LLM fallback text explanations. Pipeline works without it. |
 | `QLEVER_BOOT_TIMEOUT_SECONDS` | Optional | Timeout for auto-reload loop in `sepses-qlever` container. |
 | `QLEVER_CHECK_INTERVAL_SECONDS` | Optional | Poll interval for TTL-file check in `sepses-qlever` container. |
+| `QLEVER_INDEX_OOM_RETRIES` | Optional | Number of retries with lower memory profile when `qlever index` is killed by OOM. Default: `3`. |
+| `QLEVER_AUTOBUILD` | Optional | Default `0` (disabled). Set to `1` in `docker-compose.yml` only if you want automatic index build execution (`qlever_setup --build-index`). |
+| `QLEVER_AUTO_START` | Optional | Default `1`. Start SPARQL endpoint automatically when TTL exists and index is already built. |
+| `QLEVER_MIN_INDEX_MEMORY_BYTES` | Optional | Minimum container memory threshold (bytes) for auto-indexing. Default: `4294967296` (4GiB). |
+| `QLEVER_CONTAINER_MEMORY` | Optional | Memory cap exposed to QLever setup (e.g. `16g`). Note: Docker Desktop global memory limits can still cap this lower. |
+| `QLEVER_LOADER_LOG` | Optional | Path to background RDF loader log (`/tmp/qlever-loader.log` by default). |
 
 Set environment variables in shell before running commands or in your terminal session.
 
@@ -109,11 +115,13 @@ Main modes:
 
 ### 3.4 Load into SPARQL endpoint (Docker stack)
 
-The Docker stack automatically runs a QLever loader when `.ttl` files appear.
+The Docker stack can automatically run the QLever loader when `.ttl` files appear
+if `QLEVER_AUTOBUILD` is set to `1` in the compose service env.
 To trigger manually:
 
 ```bash
-docker compose exec sepses-qlever python -m src.sparql.rdf_loader
+docker compose exec sepses-qlever python -m src.sparql.qlever_setup --build-index
+docker compose exec sepses-qlever python -m src.sparql.qlever_setup --start
 ```
 
 SPARQL endpoint (default):
