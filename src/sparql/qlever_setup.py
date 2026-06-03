@@ -9,9 +9,10 @@ Tugas      : Install Qlever + Setup Endpoint (Week 1-2)
 Author     : Mikail Achmad
 """
 
+import os
+import re
 import subprocess
 import sys
-import os
 from pathlib import Path
 from loguru import logger
 
@@ -21,6 +22,112 @@ QLEVER_DOCKER_IMAGE = "docker.io/adfreiburg/qlever"
 DEFAULT_PORT = 7001
 DEFAULT_DATASET_NAME = "sepses-cskg"
 RDF_OUTPUT_DIR = Path("data/rdf_output")
+DEFAULT_STXXL_MEMORY = os.getenv("QLEVER_STXXL_MEMORY", "AUTO")
+DEFAULT_PARSER_BUFFER_SIZE = os.getenv("QLEVER_PARSER_BUFFER_SIZE", "AUTO")
+DEFAULT_NUM_THREADS = os.getenv("QLEVER_NUM_THREADS", "2")
+DEFAULT_MEMORY_FOR_QUERIES = os.getenv("QLEVER_MEMORY_FOR_QUERIES", "AUTO")
+DEFAULT_CACHE_MAX_SIZE = os.getenv("QLEVER_CACHE_MAX_SIZE", "AUTO")
+DEFAULT_ULIMIT = os.getenv("QLEVER_ULIMIT", "500000")
+DEFAULT_SETTINGS_JSON = os.getenv(
+    "QLEVER_SETTINGS_JSON",
+    '{ "num-triples-per-batch": 50000, "parallel-parsing": false }',
+)
+
+
+def _parse_size_to_bytes(value: str) -> int | None:
+    """Parse a memory size string (contoh: 2G, 512M, 1T) menjadi bytes."""
+    if not value:
+        return None
+
+    normalized = value.strip().lower()
+    if normalized in ("auto", "default", ""):
+        return None
+
+    match = re.fullmatch(r"(\d+(?:\.\d+)?)([kmgpt]?)b?$", normalized)
+    if not match:
+        return None
+
+    number = float(match.group(1))
+    unit = match.group(2)
+    multiplier = {
+        "": 1,
+        "k": 1024,
+        "m": 1024 ** 2,
+        "g": 1024 ** 3,
+        "t": 1024 ** 4,
+        "p": 1024 ** 5,
+    }[unit]
+    return int(number * multiplier)
+
+
+def _container_memory_bytes() -> int | None:
+    """Dapatkan limit memori container (jika ada) dari cgroup."""
+    override = _parse_size_to_bytes(os.getenv("QLEVER_CONTAINER_MEMORY", ""))
+    container_memory: int | None = override
+
+    candidates = [
+        "/sys/fs/cgroup/memory.max",  # cgroup v2
+        "/sys/fs/cgroup/memory/memory.limit_in_bytes",  # cgroup v1
+    ]
+
+    for path in candidates:
+        try:
+            raw = Path(path).read_text(encoding="utf-8").strip()
+        except (FileNotFoundError, OSError):
+            continue
+        if raw.lower() in ("max", "0"):
+            continue
+
+        if raw.isdigit():
+            value = int(raw)
+            # Pada beberapa kernel nilainya sangat besar (tidak dibatasi).
+            if value > 0 and value < 1 << 60:
+                if container_memory is None or value < container_memory:
+                    container_memory = value
+    return container_memory
+
+
+def _format_bytes_human(value: int) -> str:
+    """Format bytes ke satuan yang dibaca Qleverfile (K/M/G)."""
+    if value <= 0:
+        return "1M"
+
+    if value >= 1024 ** 3:
+        return f"{max(1, value // (1024 ** 3))}G"
+    if value >= 1024 ** 2:
+        return f"{max(1, value // (1024 ** 2))}M"
+    return f"{max(1, value // 1024)}K"
+
+
+def _resolve_memory_setting(
+    value: str,
+    container_memory: int | None,
+    ratio: float,
+    fallback: str = "1G",
+) -> str:
+    """Resolve memori setting dengan fallback otomatis berdasarkan limit container."""
+    parsed = _parse_size_to_bytes(value)
+    if parsed is not None:
+        if container_memory:
+            if parsed > container_memory:
+                parsed = container_memory
+        return _format_bytes_human(max(1 * 1024 ** 2, parsed))
+
+    if container_memory is None:
+        return fallback
+
+    target = int(container_memory * ratio)
+    return _format_bytes_human(max(1 * 1024 ** 2, target))
+
+
+def _resolve_thread_count() -> int:
+    """Resolve jumlah thread agar aman untuk host/container kecil."""
+    cpu_count = os.cpu_count() or 2
+    try:
+        threads = int(DEFAULT_NUM_THREADS)
+    except (TypeError, ValueError):
+        threads = int(os.getenv("QLEVER_NUM_THREADS", "2") or "2")
+    return max(1, min(cpu_count, threads))
 
 
 # Install Qlever
@@ -42,12 +149,17 @@ def install_qlever_cli() -> bool:
 
 def check_docker_available() -> bool:
     """Cek apakah Docker sudah terinstall dan berjalan."""
-    result = subprocess.run(
-        ["docker", "info"],
-        capture_output=True,
-        text=True
-    )
-    available = result.returncode == 0
+    try:
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        available = result.returncode == 0
+    except FileNotFoundError:
+        available = False
+
     if available:
         logger.success("Docker tersedia dan berjalan.")
     else:
@@ -60,12 +172,17 @@ def check_docker_available() -> bool:
 
 def check_qlever_installed() -> bool:
     """Cek apakah qlever CLI sudah terinstall."""
-    result = subprocess.run(
-        ["qlever", "--version"],
-        capture_output=True,
-        text=True
-    )
-    return result.returncode == 0
+    try:
+        result = subprocess.run(
+            ["qlever", "--version"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+    except FileNotFoundError:
+        logger.warning("qlever CLI belum terinstall atau tidak ada di PATH.")
+        return False
 
 
 # Buat Qleverfile
@@ -99,30 +216,110 @@ def generate_qleverfile(
         Path ke Qleverfile yang telah dibuat.
     """
 
-    # Kumpulkan semua file .ttl di rdf_output
+    # Kumpulkan semua file .ttl di rdf_output.
+    # Simpan juga CAT_INPUT_FILES untuk fallback kompatibilitas.
     ttl_files = list(rdf_dir.glob("*.ttl")) if rdf_dir.exists() else []
-    input_files = " ".join(str(f) for f in ttl_files) if ttl_files else "data/rdf_output/*.ttl"
+    description = os.getenv("QLEVER_DATASET_DESCRIPTION", dataset_name).replace('"', '\\"')
+    input_files = (
+        " ".join(str(f) for f in ttl_files)
+        if ttl_files
+        else "data/rdf_output/*.ttl"
+    )
+    cat_input_files = (
+        f"cat {' '.join(str(f) for f in ttl_files)}"
+        if ttl_files
+        else "cat data/rdf_output/*.ttl"
+    )
+    container_mem = _container_memory_bytes()
+    logger.info(
+        "Resolusi memori QLever: container_mem={} bytes, stxxl={}, parser_buffer={}, threads={}, mem_queries={}, cache={}".format(
+            container_mem,
+            _resolve_memory_setting(
+                DEFAULT_STXXL_MEMORY,
+                container_mem,
+                ratio=0.2,
+                fallback="1G",
+            ),
+            _resolve_memory_setting(
+                DEFAULT_PARSER_BUFFER_SIZE,
+                container_mem,
+                ratio=0.002,
+                fallback="1M",
+            ),
+            _resolve_thread_count(),
+            _resolve_memory_setting(
+                DEFAULT_MEMORY_FOR_QUERIES,
+                container_mem,
+                ratio=0.25,
+                fallback="768M",
+            ),
+            _resolve_memory_setting(
+                DEFAULT_CACHE_MAX_SIZE,
+                container_mem,
+                ratio=0.1,
+                fallback="256M",
+            ),
+        )
+    )
+    stxxl_memory = _resolve_memory_setting(
+        DEFAULT_STXXL_MEMORY,
+        container_mem,
+        ratio=0.2,
+        fallback="1G",
+    )
+    parser_buffer_size = _resolve_memory_setting(
+        DEFAULT_PARSER_BUFFER_SIZE,
+        container_mem,
+        ratio=0.002,
+        fallback="1M",
+    )
+    num_threads = _resolve_thread_count()
+    memory_for_queries = _resolve_memory_setting(
+        DEFAULT_MEMORY_FOR_QUERIES,
+        container_mem,
+        ratio=0.25,
+        fallback="768M",
+    )
+    cache_max_size = _resolve_memory_setting(
+        DEFAULT_CACHE_MAX_SIZE,
+        container_mem,
+        ratio=0.1,
+        fallback="256M",
+    )
+    ulimit = os.getenv("QLEVER_ULIMIT", DEFAULT_ULIMIT) or "500000"
+    settings_json = os.getenv("QLEVER_SETTINGS_JSON", DEFAULT_SETTINGS_JSON)
+    use_text_index = os.getenv("QLEVER_USE_TEXT_INDEX", "false").strip().lower()
+    if use_text_index not in {"true", "1", "yes", "on"}:
+        use_text_index = "false"
+    elif use_text_index in {"1", "yes", "on"}:
+        use_text_index = "true"
 
     qleverfile_content = f"""# Qleverfile untuk SEPSES Agentic CSKG
 
 [data]
 NAME              = {dataset_name}
-INPUT_FILES       = {input_files}
-FORMAT            = turtle
+DESCRIPTION       = "{description}"
+FORMAT            = ttl
 
 [index]
-# Qlever akan membuat index dari file RDF di atas
-WITH_TEXT_INDEX   = false
+INPUT_FILES       = {input_files}
+CAT_INPUT_FILES   = {cat_input_files}
+STXXL_MEMORY      = {stxxl_memory}
+PARSER_BUFFER_SIZE = {parser_buffer_size}
+PARALLEL_PARSING  = false
+ULIMIT            = {ulimit}
+SETTINGS_JSON     = {settings_json}
 
 [server]
+USE_TEXT_INDEX    = {use_text_index}
 PORT              = {port}
-NUM_THREADS       = 4
-MEMORY_FOR_QUERIES = 4G
-CACHE_MAX_SIZE    = 2G
+NUM_THREADS       = {num_threads}
+MEMORY_FOR_QUERIES = {memory_for_queries}
+CACHE_MAX_SIZE    = {cache_max_size}
 
 [runtime]
 SYSTEM = docker
-IMAGE  = {QLEVER_DOCKER_IMAGE}
+IMAGE  = {QLEVER_DOCKER_IMAGE}:latest
 """
 
     output_path.write_text(qleverfile_content, encoding="utf-8")
@@ -139,7 +336,7 @@ def build_index(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     """
     logger.info("Membangun Qlever index dari file RDF...")
     result = subprocess.run(
-        ["qlever", "index"],
+        ["qlever", "index", "--overwrite-existing"],
         cwd=qleverfile_path.parent,
         capture_output=True,
         text=True,
@@ -155,9 +352,14 @@ def build_index(qleverfile_path: Path = Path("Qleverfile")) -> bool:
 def start_endpoint(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     """
     Jalankan `qlever start` untuk menghidupkan SPARQL endpoint.
-    Endpoint akan tersedia di http://localhost:{DEFAULT_PORT}
+    Endpoint akan tersedia di http://localhost:{DEFAULT_PORT}/sparql
     """
     logger.info(f"Menjalankan SPARQL endpoint di port {DEFAULT_PORT}...")
+    _cleanup_qlever_server_containers()
+    try:
+        stop_endpoint(qleverfile_path=qleverfile_path)
+    except Exception:
+        logger.debug("Tidak perlu stop endpoint sebelumnya sebelum start (atau gagal stop).")
     result = subprocess.run(
         ["qlever", "start"],
         cwd=qleverfile_path.parent,
@@ -166,10 +368,29 @@ def start_endpoint(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     )
     if result.returncode == 0:
         logger.success(
-            f"SPARQL endpoint aktif di: http://localhost:{DEFAULT_PORT}"
+            f"SPARQL endpoint command sukses: http://localhost:{DEFAULT_PORT}/sparql"
         )
         return True
     else:
+        if "already in use" in (result.stderr or "").lower() and "container name" in (
+            result.stderr or ""
+        ).lower():
+            logger.warning(
+                "Terdeteksi container nama qlever server lama masih ada, membersihkan dan retry start..."
+            )
+            _cleanup_qlever_server_containers()
+            result = subprocess.run(
+                ["qlever", "start"],
+                cwd=qleverfile_path.parent,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                logger.success(
+                    f"SPARQL endpoint command sukses setelah retry: http://localhost:{DEFAULT_PORT}/sparql"
+                )
+                return True
+
         logger.error(f"Gagal menjalankan endpoint:\n{result.stderr}")
         return False
 
@@ -189,6 +410,44 @@ def stop_endpoint(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     else:
         logger.error(f"Gagal menghentikan endpoint:\n{result.stderr}")
         return False
+
+
+def _cleanup_qlever_server_containers() -> None:
+    """Hapus container qlever server lama agar nama container bisa dipakai kembali."""
+    container_patterns = ["qlever.server." + DEFAULT_DATASET_NAME]
+    for pattern in container_patterns:
+        try:
+            result = subprocess.run(
+                ["docker", "ps", "-aq", "--filter", f"name={pattern}"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                continue
+
+            container_ids = [item.strip() for item in result.stdout.splitlines() if item.strip()]
+            if not container_ids:
+                continue
+
+            rm_result = subprocess.run(
+                ["docker", "rm", "-f", *container_ids],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if rm_result.returncode == 0:
+                logger.info(
+                    f"Menghapus container qlever server lama: {', '.join(container_ids)}"
+                )
+            else:
+                logger.warning(
+                    f"Gagal menghapus container lama ({pattern}): {rm_result.stderr.strip()}"
+                )
+        except FileNotFoundError:
+            logger.warning("docker CLI tidak ditemukan, skip cleanup container qlever.")
+        except Exception as exc:
+            logger.warning(f"Gagal cleanup container qlever: {exc}")
 
 
 # Entrypoint
@@ -217,12 +476,18 @@ def setup_qlever(
     # 1. Install CLI
     if not skip_install:
         if not check_qlever_installed():
-            install_qlever_cli()
+            if not install_qlever_cli():
+                logger.error("Setup dihentikan sementara: instalasi qlever CLI gagal.")
+                return
         else:
             logger.info("qlever CLI sudah terinstall, skip install.")
 
     # 2. Cek Docker
-    check_docker_available()
+    if not check_docker_available():
+        logger.error(
+            "Setup dihentikan: Docker CLI tidak tersedia untuk mode runtime docker."
+        )
+        return
 
     # 3. Generate Qleverfile
     generate_qleverfile(
@@ -234,7 +499,7 @@ def setup_qlever(
         "\nNext steps setelah RDF output tersedia:\n"
         "  1. python -m src.sparql.qlever_setup --build-index\n"
         "  2. python -m src.sparql.qlever_setup --start\n"
-        f"  3. Buka http://localhost:{port} di browser"
+        f"  3. Buka endpoint SPARQL di http://localhost:{port}/sparql"
     )
 
 
@@ -284,10 +549,13 @@ if __name__ == "__main__":
     if args.setup:
         setup_qlever(port=args.port, dataset_name=args.dataset_name)
     elif args.build_index:
-        build_index()
+        if not build_index():
+            raise SystemExit(1)
     elif args.start:
-        start_endpoint()
+        if not start_endpoint():
+            raise SystemExit(1)
     elif args.stop:
-        stop_endpoint()
+        if not stop_endpoint():
+            raise SystemExit(1)
     else:
         parser.print_help()

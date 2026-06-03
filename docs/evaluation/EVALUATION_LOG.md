@@ -87,7 +87,7 @@ docs/evaluation/
 
 ## Referensi Query SPARQL
 
-Query-query ini bisa langsung dieksekusi di UI Qlever (`http://localhost:7001`):
+Query-query ini bisa langsung dieksekusi di endpoint SPARQL (`http://localhost:7001/sparql`):
 
 ```sparql
 # Total triple

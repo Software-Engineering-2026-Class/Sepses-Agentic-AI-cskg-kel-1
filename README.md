@@ -123,7 +123,9 @@ docker compose up -d --build
 Services:
 
 - `sepses-app`: keeps the project image alive and is used to run scripts/commands.
-- `sepses-qlever`: waits for `data/rdf_output/*.ttl` and starts the SPARQL endpoint automatically when data is available.
+- `sepses-qlever`: waits for `data/rdf_output/*.ttl` and, by default, prepares QLever only.
+  Auto-build is disabled by default in compose; edit `docker-compose.yml` (`QLEVER_AUTOBUILD`) to `1`
+  only if you want automatic loader execution when TTL files appear.
 
 ```bash
 docker compose exec sepses-app python scripts/fetch_all_sources.py
@@ -133,7 +135,8 @@ docker compose exec sepses-app python -m src.agentic_pipeline.run_pipeline --all
 If needed, trigger a manual endpoint reload from the `sepses-qlever` service:
 
 ```bash
-docker compose exec sepses-qlever python -m src.sparql.rdf_loader
+docker compose exec sepses-qlever python -m src.sparql.qlever_setup --build-index
+docker compose exec sepses-qlever python -m src.sparql.qlever_setup --start
 ```
 
 SPARQL endpoint:
