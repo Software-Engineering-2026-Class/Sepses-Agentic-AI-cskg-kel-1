@@ -146,6 +146,7 @@ class KGEvaluator:
     def __init__(self, client: SparqlClient):
         self.client = client
 
+<<<<<<< Updated upstream
     # Helper
 
     def _run_count_query(self, query: str) -> int:
@@ -153,6 +154,20 @@ class KGEvaluator:
         results = self.client.query(query)
         if results and "n" in results[0]:
             return int(results[0]["n"]["value"])
+=======
+    def _count(self, query_key: str) -> int:
+        """Jalankan query COUNT dari QUERIES dict, kembalikan int."""
+        query = QUERIES.get(query_key, "")
+        if not query:
+            return 0
+        full_q = SEPSES_PREFIXES + "\n" + query
+        try:
+            results = self.client.query(full_q, add_prefixes=False)
+            if results and "n" in results[0]:
+                return int(results[0]["n"]["value"])
+        except Exception as exc:
+            logger.warning(f"Query '{query_key}' failed: {exc}")
+>>>>>>> Stashed changes
         return 0
 
     # Evaluasi individual

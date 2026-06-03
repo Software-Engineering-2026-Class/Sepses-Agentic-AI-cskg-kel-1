@@ -18,9 +18,14 @@ from loguru import logger
 
 # Import stats dataclass
 import sys
+<<<<<<< Updated upstream
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from src.evaluation.kg_evaluator import KGStats
 
+=======
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from src.evaluation.kg_evaluator import KGStats
+>>>>>>> Stashed changes
 
 # Konfigurasi visual
 
@@ -325,6 +330,7 @@ def generate_all_visualizations(stats: KGStats, output_dir: Path = OUTPUT_DIR) -
 # Demo mode (pakai data dummy jika endpoint belum siap)
 
 def _demo_stats() -> KGStats:
+<<<<<<< Updated upstream
     """Buat KGStats dengan data dummy untuk keperluan testing visual."""
     stats = KGStats(
         total_triples=2_845_912,
@@ -336,6 +342,15 @@ def _demo_stats() -> KGStats:
         cpe_count=75_000,
         capec_count=550,
         mitre_attack_count=600,
+=======
+    from src.evaluation.kg_evaluator import KGStats
+    return KGStats(
+        total_triples=2_845_912, total_entities=198_234,
+        total_relations=47,      total_classes=18,
+        cve_count=120_000,       cvss_count=95_000,
+        cwe_count=900,           cpe_count=75_000,
+        capec_count=550,         mitre_attack_count=600,
+>>>>>>> Stashed changes
         icsa_count=800,
         cve_with_cvss=88_000,
         cve_with_cwe=72_000,
@@ -376,8 +391,12 @@ if __name__ == "__main__":
     else:
         from src.sparql.sparql_client import SparqlClient
         from src.evaluation.kg_evaluator import KGEvaluator
+<<<<<<< Updated upstream
         client    = SparqlClient()
         evaluator = KGEvaluator(client)
         stats     = evaluator.run_full_evaluation()
+=======
+        s = KGEvaluator(SparqlClient()).run_full_evaluation()
+>>>>>>> Stashed changes
 
     generate_all_visualizations(stats, output_dir=Path(args.output_dir))

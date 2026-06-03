@@ -95,7 +95,7 @@ class CAPECParser(SourceParser):
                 entity_type="CAPEC",
                 external_id=capec_id,
                 title=attack_pattern.attrib.get("Name"),
-                description=_first_text(attack_pattern, ["Description"]),
+                description=_first_text(attack_pattern, ["Description"]) or attack_pattern.attrib.get("Name"),
                 properties={
                     "abstraction": attack_pattern.attrib.get("Abstraction"),
                     "structure": attack_pattern.attrib.get("Structure"),

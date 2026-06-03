@@ -23,7 +23,10 @@ sys.path.insert(0, str(ROOT))
 
 from src.sparql.sparql_client import SparqlClient
 from src.evaluation.kg_evaluator import KGEvaluator, KGStats
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
 
 # Fixtures
 
@@ -180,6 +183,7 @@ class TestSparqlClient:
 
 class TestKGVisualizer:
 
+<<<<<<< Updated upstream
     def test_all_charts_run_without_error(self, sample_stats, tmp_path):
         """Semua fungsi visualisasi harus bisa jalan tanpa exception."""
         from src.evaluation.kg_visualizer import generate_all_visualizations
@@ -194,3 +198,65 @@ class TestKGVisualizer:
         outputs = generate_all_visualizations(sample_stats, output_dir=tmp_path)
         for path in outputs:
             assert str(path).endswith(".png")
+=======
+    def test_all_charts_generate_without_error(self, full_stats, tmp_path):
+        from src.evaluation.kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        assert len(outputs) >= 5
+
+    def test_output_files_are_png(self, full_stats, tmp_path):
+        from src.evaluation.kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        for p in outputs:
+            assert str(p).endswith(".png"), f"Bukan PNG: {p}"
+
+    def test_output_files_exist(self, full_stats, tmp_path):
+        from src.evaluation.kg_visualizer import generate_all
+        outputs = generate_all(full_stats, out=tmp_path)
+        for p in outputs:
+            assert Path(p).exists()
+
+    def test_empty_missing_links_skips_chart5(self, full_stats, tmp_path):
+        from src.evaluation.kg_visualizer import plot_missing_links
+        full_stats.missing_links = {}
+        result = plot_missing_links(full_stats, out=tmp_path)
+        assert result is None   # skip karena tidak ada data
+
+# Report generator tests
+class TestReportGenerator:
+
+    def test_report_creates_file(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        assert out.exists()
+
+    def test_report_contains_sections(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text(encoding="utf-8")
+        for section in [
+            "Ringkasan Global",
+            "Entitas per Sumber",
+            "Kualitas Linking",
+            "Missing Links",
+            "Kesimpulan",
+        ]:
+            assert section in content, f"Section '{section}' tidak ada di laporan"
+
+    def test_report_contains_triple_count(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text(encoding="utf-8")
+        assert "500,000" in content or "500000" in content
+
+    def test_report_anomaly_section(self, full_stats, tmp_path):
+        from src.evaluation.report_generator import generate_report
+        full_stats.anomalies = ["[ANOMALI] CVE memiliki 0 entitas"]
+        out = tmp_path / "report.md"
+        generate_report(full_stats, output_path=out, chart_dir=tmp_path)
+        content = out.read_text(encoding="utf-8")
+        assert "Anomali" in content
+>>>>>>> Stashed changes

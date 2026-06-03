@@ -38,15 +38,22 @@ def normalize_cwe_id(value: object | None) -> str | None:
     text = clean_text(value)
     if not text:
         return None
-    text = text.upper().replace("CWE-", "")
-    return f"CWE-{text}"
+    text = text.strip(".,;: -_")
+    cleaned = re.sub(r"^CWE[-_\s]*", "", text, flags=re.I)
+    if not re.match(r"^\d+$", cleaned):
+        return None
+    return f"CWE-{cleaned}"
 
 
 def normalize_cve_id(value: object | None) -> str | None:
     text = clean_text(value)
     if not text:
         return None
-    return text.upper()
+    text = text.strip(".,;: ")
+    cleaned = re.sub(r"^CVE[-_\s]*", "", text, flags=re.I)
+    if not re.match(r"^\d{4}-\d{4,}$", cleaned):
+        return None
+    return f"CVE-{cleaned}"
 
 
 def split_multi_value(value: object | None, separators: str = r"[;,|]") -> list[str]:
