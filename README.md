@@ -285,7 +285,7 @@ The generated RDF graph can be loaded into a SPARQL endpoint (QLever or Virtuoso
 - Large-scale production deployments may require additional optimization, distributed processing, and graph database tuning.
 - Validation focuses on structural and consistency checks and does not guarantee semantic correctness of all extracted relationships.
 - Full pipeline execution on complete datasets may take several hours depending on hardware specifications and available system resources.
-- 
+
 ## Testing 
 
 ```bash
