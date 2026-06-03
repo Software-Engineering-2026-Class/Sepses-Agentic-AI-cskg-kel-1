@@ -206,6 +206,7 @@ See the dedicated pipeline documentation for complete installation, configuratio
 execution commands, expected outputs, and known limitations:
 
 - [Pipeline Usage Guide](docs/pipeline-usage.md)
+ ```
 ## Expected Output
 
 After successful pipeline execution, the following outputs are generated:
@@ -216,8 +217,8 @@ Downloaded cybersecurity datasets stored under:
 
 ```text
 data/raw/
-```
 
+```
 Including:
 
 - CVE / CVSS (NVD)
