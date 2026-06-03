@@ -9,14 +9,19 @@ bukan incremental SPARQL UPDATE.
 
 import subprocess
 import shutil
+import os
+import sys
 from pathlib import Path
 from dataclasses import dataclass, field
 from loguru import logger
+from datetime import datetime
+import time
 
 from src.sparql.endpoint_manager import EndpointManager
 
 RDF_OUTPUT_DIR   = Path("data/rdf_output")
 QLEVERFILE_PATH  = Path("Qleverfile")
+QLEVER_INDEX_LOG = Path(os.getenv("QLEVER_INDEX_LOG", "/tmp/qlever-index.log"))
 
 
 @dataclass
@@ -64,6 +69,14 @@ class RDFLoader:
         self.rdf_dir  = rdf_dir
         self.qleverfile = qleverfile
         self.mgr = endpoint_manager or EndpointManager()
+        try:
+            retry_limit = int(os.getenv("QLEVER_INDEX_OOM_RETRIES", "3"))
+            self._oom_retry_limit = max(1, retry_limit)
+        except ValueError:
+            logger.warning(
+                "QLEVER_INDEX_OOM_RETRIES tidak valid, pakai fallback 3."
+            )
+            self._oom_retry_limit = 3
 
     # Helpers
     def _collect_ttl_files(self) -> list[Path]:
@@ -79,40 +92,319 @@ class RDFLoader:
         return files
 
     def _update_qleverfile(self, ttl_files: list[Path]) -> None:
-        """
-        Update INPUT_FILES di Qleverfile agar menunjuk ke semua .ttl.
-        Diperlukan sebelum rebuild index.
-        """
+        """Update INPUT_FILES dan CAT_INPUT_FILES di Qleverfile agar menunjuk ke semua .ttl."""
         if not self.qleverfile.exists():
             logger.warning("Qleverfile tidak ditemukan, skip update.")
             return
 
-        content = self.qleverfile.read_text(encoding="utf-8")
-        input_line = " ".join(str(f) for f in ttl_files)
+        input_line = (
+            " ".join(str(f) for f in ttl_files)
+            if ttl_files
+            else "data/rdf_output/*.ttl"
+        )
+        cat_input_line = f"cat {input_line}"
+        lines = self.qleverfile.read_text(encoding="utf-8").splitlines()
 
-        lines = content.splitlines()
-        new_lines = []
-        for line in lines:
-            if line.strip().startswith("INPUT_FILES"):
-                new_lines.append(f"INPUT_FILES       = {input_line}")
-                logger.debug(f"Qleverfile INPUT_FILES diupdate: {input_line[:80]}...")
+        index_start = None
+        index_end = len(lines)
+        for idx, line in enumerate(lines):
+            if line.strip().lower() == "[index]":
+                index_start = idx
+                continue
+            if index_start is not None and idx > index_start and line.strip().startswith("["):
+                index_end = idx
+                break
+
+        if index_start is None:
+            lines.extend(["", "[index]", f"INPUT_FILES      = {input_line}", f"CAT_INPUT_FILES   = {cat_input_line}"])
+            logger.debug(
+                f"Qleverfile section [index] ditambahkan: {input_line[:80]}..."
+            )
+            self.qleverfile.write_text("\n".join(lines), encoding="utf-8")
+            return
+
+        kept_index_lines = []
+        for line in lines[index_start + 1 : index_end]:
+            stripped = line.strip()
+            if (
+                stripped.startswith("INPUT_FILES")
+                or stripped.startswith("CAT_INPUT_FILES")
+            ):
+                logger.debug(
+                    f"Melewatkan kunci lama: {line.strip()}"
+                )
+                continue
+            kept_index_lines.append(line)
+
+        updated_index_section = [
+            "[index]",
+            f"INPUT_FILES      = {input_line}",
+            f"CAT_INPUT_FILES   = {cat_input_line}",
+            *kept_index_lines,
+        ]
+        new_lines = lines[:index_start] + updated_index_section + lines[index_end:]
+        self.qleverfile.write_text("\n".join(new_lines), encoding="utf-8")
+        logger.debug(f"Qleverfile INPUT_FILES diupdate: {input_line[:80]}...")
+        logger.debug(f"Qleverfile CAT_INPUT_FILES diupdate: {cat_input_line[:80]}...")
+
+    def _cleanup_qlever_containers(self) -> None:
+        """Bersihkan container bantu qlever yang tertinggal agar nama container tidak bentrok."""
+        try:
+            result = subprocess.run(
+                ["docker", "ps", "-aq", "--filter", "name=qlever"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                return
+
+            container_ids = [item.strip() for item in result.stdout.splitlines() if item.strip()]
+            if not container_ids:
+                return
+
+            rm_result = subprocess.run(
+                ["docker", "rm", "-f", *container_ids],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if rm_result.returncode == 0:
+                logger.info(f"Berhasil membersihkan {len(container_ids)} container qlever.")
             else:
+                logger.warning(f"Gagal membersihkan container qlever: {rm_result.stderr.strip()}")
+        except FileNotFoundError:
+            logger.warning("docker CLI tidak ditemukan, skip cleanup container qlever.")
+        except Exception as exc:
+            logger.warning(f"Cleanup container qlever gagal: {exc}")
+
+    def _run_qlever_index(
+        self,
+        attempt: int,
+        stxxl_memory: str | None = None,
+        parser_buffer_size: str | None = None,
+        use_profile_flags: bool = False,
+    ) -> subprocess.CompletedProcess:
+        """Jalankan rebuild index menggunakan qlever_setup agar proses stabil."""
+        command = [
+            sys.executable,
+            "-m",
+            "src.sparql.qlever_setup",
+            "--build-index",
+        ]
+        env = os.environ.copy()
+
+        # Opsi profil memori pada loader disetel lewat env agar perilaku build-index
+        # tetap memakai batasan yang eksplisit untuk upaya retry berikutnya.
+        if use_profile_flags and stxxl_memory and parser_buffer_size:
+            env["QLEVER_STXXL_MEMORY"] = stxxl_memory
+            env["QLEVER_PARSER_BUFFER_SIZE"] = parser_buffer_size
+
+        logger.debug(f"Menjalankan qlever build-index: {' '.join(command)}")
+        attempt_banner = f"\n=== qlever index attempt #{attempt} ===\n"
+        timing = f"timestamp={datetime.utcnow().isoformat()}Z\n"
+        cmd = f"command={' '.join(command)}\n"
+
+        with QLEVER_INDEX_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(attempt_banner)
+            fh.write(timing)
+            fh.write(cmd)
+
+            result = subprocess.run(
+                command,
+                cwd=self.qleverfile.parent,
+                text=True,
+                capture_output=True,
+                env=env,
+            )
+
+            fh.write(f"returncode={result.returncode}\n")
+            if result.stdout:
+                fh.write(result.stdout)
+            if result.stderr:
+                fh.write(result.stderr)
+
+        logger.debug(
+            f"qlever index command selesai (attempt #{attempt}): returncode={result.returncode}"
+        )
+
+        if result.stdout:
+            logger.debug(f"qlever index stdout #{attempt}:\n{result.stdout}")
+        if result.stderr:
+            logger.debug(f"qlever index stderr #{attempt}:\n{result.stderr}")
+        if (
+            result.returncode != 0
+            and result.returncode not in (-9, 137)
+            and not (result.stdout or result.stderr)
+        ):
+            logger.debug(
+                f"qlever index output tidak tertangkap (di-stream ke {QLEVER_INDEX_LOG})."
+            )
+
+        return result
+
+    def _update_qleverfile_memory_profile(
+        self,
+        stxxl_memory: str,
+        parser_buffer_size: str,
+    ) -> bool:
+        """Update cepat pengaturan memori index di Qleverfile."""
+        if not self.qleverfile.exists():
+            logger.warning("Qleverfile tidak ditemukan, skip update profil memori.")
+            return False
+
+        lines = self.qleverfile.read_text(encoding="utf-8").splitlines()
+        in_index_section = False
+        saw_stxxl = False
+        saw_parser = False
+        new_lines: list[str] = []
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                in_index_section = stripped.lower() == "[index]"
                 new_lines.append(line)
+                continue
+
+            if in_index_section and stripped.startswith("STXXL_MEMORY"):
+                new_lines.append(f"STXXL_MEMORY      = {stxxl_memory}")
+                saw_stxxl = True
+                continue
+            if in_index_section and stripped.startswith("PARSER_BUFFER_SIZE"):
+                new_lines.append(f"PARSER_BUFFER_SIZE = {parser_buffer_size}")
+                saw_parser = True
+                continue
+
+            new_lines.append(line)
+
+        if not saw_stxxl or not saw_parser:
+            insertion_index = None
+            for i, line in enumerate(new_lines):
+                if line.strip().lower() == "[index]":
+                    insertion_index = i + 1
+                    break
+
+            if insertion_index is not None:
+                if not saw_stxxl:
+                    new_lines.insert(insertion_index, f"STXXL_MEMORY      = {stxxl_memory}")
+                    insertion_index += 1
+                if not saw_parser:
+                    new_lines.insert(
+                        insertion_index,
+                        f"PARSER_BUFFER_SIZE = {parser_buffer_size}",
+                    )
+
+            if insertion_index is None:
+                logger.warning(
+                    "Tidak dapat menyuntik pengaturan memori di Qleverfile, cek format [index] section."
+                )
+                return False
 
         self.qleverfile.write_text("\n".join(new_lines), encoding="utf-8")
+        logger.debug(
+            f"Profil memori rebuild Qleverfile diupdate: "
+            f"STXXL_MEMORY={stxxl_memory}, PARSER_BUFFER_SIZE={parser_buffer_size}"
+        )
+        return True
+
+    @staticmethod
+    def _is_retryable_index_failure(return_code: int, output: str) -> bool:
+        """Tentukan apakah kegagalan index masih bisa dicoba lagi."""
+        if return_code in (-9, 137):
+            return True
+        if not output:
+            return False
+
+        normalized = output.lower()
+        retry_patterns = [
+            "error response from daemon",
+            "container",
+            "is not running",
+            "no such container",
+            "out of memory",
+            "killed",
+            "segmentation",
+        ]
+        return any(pattern in normalized for pattern in retry_patterns)
 
     def _rebuild_index(self) -> bool:
         """Jalankan `qlever index` untuk rebuild index dari file RDF."""
         logger.info("Rebuilding Qlever index dari file RDF...")
-        result = subprocess.run(
-            ["qlever", "index"],
-            cwd=self.qleverfile.parent,
-            capture_output=True, text=True,
+        default_stxxl_memory = os.getenv("QLEVER_INDEX_RETRY_STXXL_MEMORY", "").strip()
+        default_parser_buffer = os.getenv("QLEVER_INDEX_RETRY_PARSER_BUFFER_SIZE", "").strip()
+        candidate_runs = [(None, None, False)]
+
+        if (
+            default_stxxl_memory
+            and default_parser_buffer
+            and default_stxxl_memory.upper() != "AUTO"
+            and default_parser_buffer.upper() != "AUTO"
+        ):
+            candidate_runs.append(
+                (default_stxxl_memory, default_parser_buffer, True),
+            )
+
+        candidate_runs = candidate_runs[: self._oom_retry_limit]
+
+        for run_index, (stxxl_mem, parser_buf, use_flags) in enumerate(
+            candidate_runs, start=1
+        ):
+            if use_flags:
+                logger.info(
+                    "Mencoba rebuild index (percobaan "
+                    f"{run_index}/{len(candidate_runs)}): STXXL_MEMORY={stxxl_mem}, "
+                    f"PARSER_BUFFER_SIZE={parser_buf}"
+                )
+                if not self._update_qleverfile_memory_profile(stxxl_mem, parser_buf):
+                    logger.warning(
+                        "Gagal menulis profil memori ke Qleverfile, lanjut tetap menggunakan profil berikut."
+                    )
+            else:
+                logger.info(
+                    f"Mencoba rebuild index (percobaan "
+                    f"{run_index}/{len(candidate_runs)}): tanpa override flag CLI."
+                )
+
+            self._cleanup_qlever_containers()
+            result = self._run_qlever_index(
+                attempt=run_index,
+                stxxl_memory=stxxl_mem,
+                parser_buffer_size=parser_buf,
+                use_profile_flags=use_flags,
+            )
+            combined_output = (result.stdout or "") + (result.stderr or "")
+            if result.returncode == 0:
+                logger.success(
+                    "Index berhasil dibangun "
+                    + (
+                        f"(percobaan {run_index} dengan STXXL_MEMORY={stxxl_mem}, "
+                        f"PARSER_BUFFER_SIZE={parser_buf})."
+                        if use_flags
+                        else "(percobaan tanpa override flag)."
+                    )
+                )
+                return True
+
+            if self._is_retryable_index_failure(result.returncode, combined_output):
+                logger.warning(
+                    f"Percobaan {run_index} gagal (code {result.returncode}) dan retryable."
+                )
+                if run_index < len(candidate_runs):
+                    time.sleep(2)
+                    continue
+
+            logger.error(f"Gagal rebuild index pada percobaan {run_index}.")
+            if result.stderr:
+                logger.error(f"qlever index stderr: {result.stderr.strip()}")
+            logger.error(
+                f"Lihat log lengkap di {QLEVER_INDEX_LOG} untuk detail error qlever index."
+            )
+            return False
+
+        logger.error(
+            "Index rebuild gagal setelah beberapa percobaan fallback memori. "
+            "Silakan tambah memori Docker Desktop dan set variable `QLEVER_CONTAINER_MEMORY`."
         )
-        if result.returncode == 0:
-            logger.success("Index berhasil dibangun.")
-            return True
-        logger.error(f"Gagal rebuild index:\n{result.stderr[-1000:]}")
         return False
 
     def _verify_load(self) -> int:

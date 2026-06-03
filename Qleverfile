@@ -1,0 +1,26 @@
+# Qleverfile untuk SEPSES Agentic CSKG
+
+[data]
+NAME              = sepses-cskg
+DESCRIPTION       = "sepses-cskg"
+FORMAT            = ttl
+
+[index]
+INPUT_FILES       = data/rdf_output/sepses_cskg.ttl
+CAT_INPUT_FILES   = cat data/rdf_output/sepses_cskg.ttl
+STXXL_MEMORY      = 3G
+PARSER_BUFFER_SIZE = 32M
+PARALLEL_PARSING  = false
+ULIMIT            = 500000
+SETTINGS_JSON     = { "num-triples-per-batch": 50000, "parallel-parsing": false }
+
+[server]
+USE_TEXT_INDEX    = false
+PORT              = 7001
+NUM_THREADS       = 1
+MEMORY_FOR_QUERIES = 768M
+CACHE_MAX_SIZE    = 256M
+
+[runtime]
+SYSTEM = docker
+IMAGE  = docker.io/adfreiburg/qlever:latest

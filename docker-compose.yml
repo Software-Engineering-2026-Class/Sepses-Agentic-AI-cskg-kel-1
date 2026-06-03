@@ -3,12 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    working_dir: /app
+    working_dir: ${PWD}
     environment:
       PYTHONUNBUFFERED: "1"
       NVD_API_KEY: ${NVD_API_KEY:-}
     volumes:
       - .:/app
+      - .:${PWD}
     command: ["sleep", "infinity"]
     tty: true
 
@@ -16,16 +17,28 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    working_dir: /app
+    working_dir: ${PWD}
+    restart: unless-stopped
+    mem_limit: ${QLEVER_CONTAINER_MEMORY:-16g}
     environment:
       PYTHONUNBUFFERED: "1"
       QLEVER_BOOT_TIMEOUT_SECONDS: ${QLEVER_BOOT_TIMEOUT_SECONDS:-600}
       QLEVER_CHECK_INTERVAL_SECONDS: ${QLEVER_CHECK_INTERVAL_SECONDS:-10}
+      QLEVER_RETRY_AFTER_FAILURE_SECONDS: ${QLEVER_RETRY_AFTER_FAILURE_SECONDS:-30}
+      QLEVER_AUTOBUILD: "0"
+      QLEVER_AUTO_START: ${QLEVER_AUTO_START:-1}
+      QLEVER_CONTAINER_MEMORY: ${QLEVER_CONTAINER_MEMORY:-16g}
+      QLEVER_STXXL_MEMORY: ${QLEVER_STXXL_MEMORY:-AUTO}
+      QLEVER_PARSER_BUFFER_SIZE: ${QLEVER_PARSER_BUFFER_SIZE:-AUTO}
+      QLEVER_NUM_THREADS: ${QLEVER_NUM_THREADS:-1}
+      QLEVER_MEMORY_FOR_QUERIES: ${QLEVER_MEMORY_FOR_QUERIES:-768M}
+      QLEVER_CACHE_MAX_SIZE: ${QLEVER_CACHE_MAX_SIZE:-256M}
+      QLEVER_INDEX_OOM_RETRIES: ${QLEVER_INDEX_OOM_RETRIES:-3}
+      QLEVER_MIN_INDEX_MEMORY_BYTES: ${QLEVER_MIN_INDEX_MEMORY_BYTES:-4294967296}
     volumes:
       - .:/app
+      - .:${PWD}
       - /var/run/docker.sock:/var/run/docker.sock
     command: ["/bin/bash", "/app/scripts/docker-entrypoint-qlever.sh"]
-    ports:
-      - "7001:7001"
     depends_on:
       - sepses-app
