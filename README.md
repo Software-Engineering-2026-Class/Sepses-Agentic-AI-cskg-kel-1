@@ -111,6 +111,17 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+## Demo
+
+```bash
+python scripts/fetch_all_sources.py
+
+python -m src.agentic_pipeline.run_pipeline --all-sources --output data/rdf_output/sepses_cskg.ttl
+
+python -m src.evaluation.run_evaluation
+
+python -m src.sparql.rdf_loader
+```
 
 ### Dockerized Environment
 
