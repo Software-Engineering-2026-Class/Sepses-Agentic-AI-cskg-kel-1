@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.sparql.sparql_client import SparqlClient
-from src.evaluation.pre_kg_evaluator import KGEvaluator, KGStats
+from src.evaluation.kg_evaluator import KGEvaluator, KGStats
 
 # Fixtures
 @pytest.fixture
@@ -233,24 +233,24 @@ class TestSparqlClient:
 class TestKGVisualizer:
 
     def test_all_charts_generate_without_error(self, full_stats, tmp_path):
-        from src.evaluation.pre_kg_visualizer import generate_all
+        from src.evaluation.kg_visualizer import generate_all
         outputs = generate_all(full_stats, out=tmp_path)
         assert len(outputs) >= 5
 
     def test_output_files_are_png(self, full_stats, tmp_path):
-        from src.evaluation.pre_kg_visualizer import generate_all
+        from src.evaluation.kg_visualizer import generate_all
         outputs = generate_all(full_stats, out=tmp_path)
         for p in outputs:
             assert str(p).endswith(".png"), f"Bukan PNG: {p}"
 
     def test_output_files_exist(self, full_stats, tmp_path):
-        from src.evaluation.pre_kg_visualizer import generate_all
+        from src.evaluation.kg_visualizer import generate_all
         outputs = generate_all(full_stats, out=tmp_path)
         for p in outputs:
             assert Path(p).exists()
 
     def test_empty_missing_links_skips_chart5(self, full_stats, tmp_path):
-        from src.evaluation.pre_kg_visualizer import plot_missing_links
+        from src.evaluation.kg_visualizer import plot_missing_links
         full_stats.missing_links = {}
         result = plot_missing_links(full_stats, out=tmp_path)
         assert result is None   # skip karena tidak ada data
@@ -268,7 +268,7 @@ class TestReportGenerator:
         from src.evaluation.report_generator import generate_report
         out = tmp_path / "report.md"
         generate_report(full_stats, output_path=out, chart_dir=tmp_path)
-        content = out.read_text()
+        content = out.read_text(encoding="utf-8")
         for section in [
             "Ringkasan Global",
             "Entitas per Sumber",
@@ -282,7 +282,7 @@ class TestReportGenerator:
         from src.evaluation.report_generator import generate_report
         out = tmp_path / "report.md"
         generate_report(full_stats, output_path=out, chart_dir=tmp_path)
-        content = out.read_text()
+        content = out.read_text(encoding="utf-8")
         assert "500,000" in content or "500000" in content
 
     def test_report_anomaly_section(self, full_stats, tmp_path):
@@ -290,5 +290,5 @@ class TestReportGenerator:
         full_stats.anomalies = ["[ANOMALI] CVE memiliki 0 entitas"]
         out = tmp_path / "report.md"
         generate_report(full_stats, output_path=out, chart_dir=tmp_path)
-        content = out.read_text()
+        content = out.read_text(encoding="utf-8")
         assert "Anomali" in content

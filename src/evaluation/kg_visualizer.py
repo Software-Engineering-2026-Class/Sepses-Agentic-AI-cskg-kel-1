@@ -15,7 +15,7 @@ from loguru import logger
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.evaluation.pre_kg_evaluator import KGStats
+from src.evaluation.kg_evaluator import KGStats
 
 # Konfigurasi visual
 COLORS = {
@@ -316,7 +316,7 @@ def generate_all(stats: KGStats, out: Path = OUTPUT_DIR) -> list[Path]:
 
 # Demo mode
 def _demo_stats() -> KGStats:
-    from src.evaluation.pre_kg_evaluator import KGStats
+    from src.evaluation.kg_evaluator import KGStats
     return KGStats(
         total_triples=2_845_912, total_entities=198_234,
         total_relations=47,      total_classes=18,
@@ -347,7 +347,7 @@ if __name__ == "__main__":
         s = _demo_stats()
     else:
         from src.sparql.sparql_client import SparqlClient
-        from src.evaluation.pre_kg_evaluator import KGEvaluator
+        from src.evaluation.kg_evaluator import KGEvaluator
         s = KGEvaluator(SparqlClient()).run_full_evaluation()
 
     generate_all(s, Path(args.output_dir))

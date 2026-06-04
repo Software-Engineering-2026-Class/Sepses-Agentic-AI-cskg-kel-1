@@ -14,14 +14,14 @@ import sys
 from pathlib import Path
 from dataclasses import dataclass, field
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timezone
 import time
 
 from src.sparql.endpoint_manager import EndpointManager
 
 RDF_OUTPUT_DIR   = Path("data/rdf_output")
 QLEVERFILE_PATH  = Path("Qleverfile")
-QLEVER_INDEX_LOG = Path(os.getenv("QLEVER_INDEX_LOG", "/tmp/qlever-index.log"))
+QLEVER_INDEX_LOG = Path(os.getenv("QLEVER_INDEX_LOG", "data/reports/qlever-index.log"))
 
 
 @dataclass
@@ -97,8 +97,9 @@ class RDFLoader:
             logger.warning("Qleverfile tidak ditemukan, skip update.")
             return
 
+        # Gunakan forward slash agar path kompatibel di dalam Docker (Linux shell)
         input_line = (
-            " ".join(str(f) for f in ttl_files)
+            " ".join(f.as_posix() for f in ttl_files)
             if ttl_files
             else "data/rdf_output/*.ttl"
         )
@@ -174,9 +175,26 @@ class RDFLoader:
             else:
                 logger.warning(f"Gagal membersihkan container qlever: {rm_result.stderr.strip()}")
         except FileNotFoundError:
-            logger.warning("docker CLI tidak ditemukan, skip cleanup container qlever.")
+            logger.debug("docker CLI tidak ditemukan, skip cleanup container qlever.")
         except Exception as exc:
             logger.warning(f"Cleanup container qlever gagal: {exc}")
+
+    @staticmethod
+    def _check_docker_available() -> bool:
+        """
+        Cek apakah Docker CLI tersedia dan dapat dieksekusi.
+        Qlever membutuhkan Docker untuk membangun index.
+        """
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            return result.returncode == 0
+        except FileNotFoundError:
+            return False
 
     def _run_qlever_index(
         self,
@@ -202,9 +220,10 @@ class RDFLoader:
 
         logger.debug(f"Menjalankan qlever build-index: {' '.join(command)}")
         attempt_banner = f"\n=== qlever index attempt #{attempt} ===\n"
-        timing = f"timestamp={datetime.utcnow().isoformat()}Z\n"
+        timing = f"timestamp={datetime.now(timezone.utc).isoformat()}Z\n"
         cmd = f"command={' '.join(command)}\n"
 
+        QLEVER_INDEX_LOG.parent.mkdir(parents=True, exist_ok=True)
         with QLEVER_INDEX_LOG.open("a", encoding="utf-8") as fh:
             fh.write(attempt_banner)
             fh.write(timing)
@@ -330,6 +349,18 @@ class RDFLoader:
     def _rebuild_index(self) -> bool:
         """Jalankan `qlever index` untuk rebuild index dari file RDF."""
         logger.info("Rebuilding Qlever index dari file RDF...")
+
+        # Qlever menggunakan Docker untuk membangun index — cek dulu ketersediaannya.
+        if not self._check_docker_available():
+            logger.error(
+                "Docker tidak tersedia atau tidak berjalan di sistem ini.\n"
+                "Qlever membutuhkan Docker untuk membangun index RDF.\n"
+                "Solusi:\n"
+                "  1. Install Docker Desktop dari https://docs.docker.com/get-docker/\n"
+                "  2. Pastikan Docker Desktop sudah berjalan (ikon di system tray)\n"
+                "  3. Jalankan kembali: python -m src.sparql.rdf_loader"
+            )
+            return False
         default_stxxl_memory = os.getenv("QLEVER_INDEX_RETRY_STXXL_MEMORY", "").strip()
         default_parser_buffer = os.getenv("QLEVER_INDEX_RETRY_PARSER_BUFFER_SIZE", "").strip()
         candidate_runs = [(None, None, False)]

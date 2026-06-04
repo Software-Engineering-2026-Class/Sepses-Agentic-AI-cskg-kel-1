@@ -194,9 +194,12 @@ class KGEvaluator:
         if not query:
             return 0
         full_q = SEPSES_PREFIXES + "\n" + query
-        results = self.client.query(full_q, add_prefixes=False)
-        if results and "n" in results[0]:
-            return int(results[0]["n"]["value"])
+        try:
+            results = self.client.query(full_q, add_prefixes=False)
+            if results and "n" in results[0]:
+                return int(results[0]["n"]["value"])
+        except Exception as exc:
+            logger.warning("Error running count query for {}: {}", query_key, exc)
         return 0
 
     def _run_section(self, keys: list[str]) -> dict[str, int]:

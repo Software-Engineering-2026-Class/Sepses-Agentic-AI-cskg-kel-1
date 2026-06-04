@@ -50,6 +50,7 @@ def build_fetchers(
     sources: list[str],
     force: bool = False,
     max_nvd: int | None = None,
+    max_icsa: int | None = None,
 ) -> list[tuple[str, object]]:
     """Instantiate the requested fetcher objects."""
     fetchers: list[tuple[str, object]] = []
@@ -66,7 +67,7 @@ def build_fetchers(
         elif name == "attack":
             fetchers.append(("attack", AttackFetcher(force=force)))
         elif name == "icsa":
-            fetchers.append(("icsa", ICSAFetcher(force=force)))
+            fetchers.append(("icsa", ICSAFetcher(force=force, max_advisories=max_icsa)))
         else:
             logger.warning("Unknown source '{}', skipping.", name)
 
@@ -119,6 +120,12 @@ def main() -> None:
         default=None,
         help="Max records for NVD/CPE paginated APIs (useful for testing).",
     )
+    parser.add_argument(
+        "--max-icsa",
+        type=int,
+        default=None,
+        help="Max number of ICSA advisories to download (useful for testing).",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 60)
@@ -126,9 +133,10 @@ def main() -> None:
     logger.info("Sources: {}", ", ".join(args.sources))
     logger.info("Force:   {}", args.force)
     logger.info("Max NVD: {}", args.max_nvd or "unlimited")
+    logger.info("Max ICSA: {}", args.max_icsa or "unlimited")
     logger.info("=" * 60)
 
-    fetchers = build_fetchers(args.sources, args.force, args.max_nvd)
+    fetchers = build_fetchers(args.sources, args.force, args.max_nvd, args.max_icsa)
     results: list[dict] = []
 
     for name, fetcher in fetchers:
