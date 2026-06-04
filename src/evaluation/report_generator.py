@@ -11,7 +11,7 @@ from loguru import logger
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.evaluation.pre_kg_evaluator import KGStats
+from src.evaluation.kg_evaluator import KGStats
 
 
 OUTPUT_DEFAULT = Path("docs/evaluation/EVALUATION_REPORT.md")
@@ -222,11 +222,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.demo:
-        from src.evaluation.pre_kg_visualizer import _demo_stats
+        from src.evaluation.kg_visualizer import _demo_stats
         stats = _demo_stats()
     else:
         from src.sparql.sparql_client import SparqlClient
-        from src.evaluation.pre_kg_evaluator import KGEvaluator
+        from src.evaluation.kg_evaluator import KGEvaluator
         stats = KGEvaluator(SparqlClient()).run_full_evaluation()
 
     generate_report(
