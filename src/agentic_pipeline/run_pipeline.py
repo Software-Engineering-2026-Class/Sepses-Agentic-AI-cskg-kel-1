@@ -23,13 +23,14 @@ def run_pipeline(
     output: str,
     force_fetch: bool = False,
     max_nvd: int | None = None,
+    max_icsa: int | None = None,
 ) -> int:
     """Run the agentic pipeline."""
     logger.info("=== SEPSES Agentic Pipeline Started ===")
     
     # 1. FetcherAgent
     if sources_to_fetch:
-        fetcher = FetcherAgent(force_download=force_fetch, max_nvd_results=max_nvd)
+        fetcher = FetcherAgent(force_download=force_fetch, max_nvd_results=max_nvd, max_icsa_advisories=max_icsa)
         fetch_results = fetcher.run(sources_to_fetch)
         
         # Merge fetched files into raw_files dict for parsing
@@ -87,6 +88,7 @@ def main() -> None:
     parser.add_argument("--fetch", nargs="+", help="Specific sources to fetch (e.g., nvd cwe).")
     parser.add_argument("--force-fetch", action="store_true", help="Force re-download of data.")
     parser.add_argument("--max-nvd", type=int, default=None, help="Max records for NVD fetching.")
+    parser.add_argument("--max-icsa", type=int, default=None, help="Max ICSA advisories to download.")
     
     # Local file inputs (skip fetch for these)
     parser.add_argument("--capec", help="Local CAPEC XML file.")
@@ -129,6 +131,7 @@ def main() -> None:
         output=args.output,
         force_fetch=args.force_fetch,
         max_nvd=args.max_nvd,
+        max_icsa=args.max_icsa,
     )
     
     sys.exit(exit_code)

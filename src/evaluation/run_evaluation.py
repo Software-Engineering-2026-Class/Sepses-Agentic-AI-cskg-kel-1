@@ -33,11 +33,11 @@ def run(demo: bool = False, output_dir: Path = Path("docs/evaluation")) -> None:
     # Dapatkan stats
     if demo:
         logger.info("Mode demo aktif — menggunakan data dummy.")
-        from src.evaluation.pre_kg_visualizer import _demo_stats
+        from src.evaluation.kg_visualizer import _demo_stats
         stats = _demo_stats()
     else:
         from src.sparql.sparql_client import SparqlClient
-        from src.evaluation.pre_kg_evaluator import KGEvaluator
+        from src.evaluation.kg_evaluator import KGEvaluator
 
         client = SparqlClient()
         if not client.ping(retries=3):
@@ -55,7 +55,7 @@ def run(demo: bool = False, output_dir: Path = Path("docs/evaluation")) -> None:
         evaluator.save_missing_links_csv(stats, output_dir / "kg_missing_links.csv")
 
     # Visualisasi
-    from src.evaluation.pre_kg_visualizer import generate_all
+    from src.evaluation.kg_visualizer import generate_all
     charts = generate_all(stats, out=output_dir)
 
     # Laporan Markdown

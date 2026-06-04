@@ -55,7 +55,7 @@ _IDENTIFIER_PATTERNS = {
     str(CWE.CWE): re.compile(r"^CWE-\d+$"),
     str(CAPEC.CAPEC): re.compile(r"^CAPEC-\d+$"),
     str(CPE.CPE): re.compile(r"^cpe:.*$"),
-    str(ICSA.ICSA): re.compile(r"^ICSA-\d{2}-\d{3}-\d{2}[A-Za-z]?$"),
+    str(ICSA.ICSA): re.compile(r"^(?:ICSA|ICSMA)-\d{2}-\d{2,3}-\d{2}[A-Za-z]?(?:-Supplement[A-Za-z]?)?$"),
     str(ATTACK.Technique): re.compile(r"^T\d{4}(?:\.\d{3})?$"),
     str(ATTACK.Tactic): re.compile(r"^TA\d{4}$"),
 }
@@ -155,6 +155,17 @@ class KGValidator:
         for rdf_type_uri, required_preds in _REQUIRED.items():
             rdf_type = URIRef(rdf_type_uri)
             for subj in self.graph.subjects(RDF.type, rdf_type):
+                # Skip validation for stub/placeholder target entities (referenced externally but not fully defined).
+                # A stub has incoming references (is a target of a link) and contains no other properties besides type and identifier.
+                preds = set(self.graph.predicates(subj, None))
+                if (
+                    len(preds) <= 2
+                    and RDF.type in preds
+                    and DCTERMS.identifier in preds
+                    and any(self.graph.subjects(None, subj))
+                ):
+                    continue
+
                 for pred in required_preds:
                     values = list(self.graph.objects(subj, pred))
                     if not values:
