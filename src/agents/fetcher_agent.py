@@ -22,9 +22,10 @@ from src.ingestion import (
 class FetcherAgent:
     """Agent that fetches and caches cybersecurity datasets."""
 
-    def __init__(self, force_download: bool = False, max_nvd_results: int | None = None) -> None:
+    def __init__(self, force_download: bool = False, max_nvd_results: int | None = None, max_icsa_advisories: int | None = None) -> None:
         self.force = force_download
         self.max_nvd = max_nvd_results
+        self.max_icsa = max_icsa_advisories
         
         self.fetchers = {
             "nvd": NVDFetcher(force=self.force, max_results=self.max_nvd),
@@ -32,7 +33,7 @@ class FetcherAgent:
             "capec": CAPECFetcher(force=self.force),
             "cpe": CPEFetcher(force=self.force, max_results=self.max_nvd),
             "attack": AttackFetcher(force=self.force),
-            "icsa": ICSAFetcher(force=self.force),
+            "icsa": ICSAFetcher(force=self.force, max_advisories=self.max_icsa),
         }
 
     def fetch_all(self, sources: list[str] | None = None) -> dict[str, dict[str, Any]]:
