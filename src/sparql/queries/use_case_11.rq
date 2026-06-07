@@ -1,0 +1,16 @@
+# Use Case 11: CAPEC Relationship Hub
+# Show CAPEC entries that connect to the most weaknesses and related attack patterns.
+
+PREFIX capec: <http://w3id.org/sepses/vocab/ref/capec#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?capecId ?capecTitle (COUNT(DISTINCT ?weakness) AS ?weaknessCount) (COUNT(DISTINCT ?relatedPattern) AS ?relatedPatternCount) WHERE {
+  ?capec a capec:CAPEC ;
+         dcterms:identifier ?capecId ;
+         dcterms:title ?capecTitle .
+  OPTIONAL { ?capec capec:hasRelatedWeakness ?weakness . }
+  OPTIONAL { ?capec capec:hasRelatedAttackPattern ?relatedPattern . }
+}
+GROUP BY ?capecId ?capecTitle
+ORDER BY DESC(?weaknessCount) DESC(?relatedPatternCount) ?capecId
+LIMIT 20

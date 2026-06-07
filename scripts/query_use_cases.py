@@ -1,6 +1,6 @@
 """query_use_cases.py
 ===================
-Script to run the three security use-case queries on the generated KG,
+Script to run the security use-case queries on the generated KG,
 either via SPARQL endpoint or locally using RDFLib, and output results.
 """
 
@@ -78,6 +78,16 @@ def main():
         ("use_case_1", "Vulnerability Assessment", ROOT / "src" / "sparql" / "queries" / "use_case_1.rq"),
         ("use_case_2", "Weakness and Attack Pattern Exploration", ROOT / "src" / "sparql" / "queries" / "use_case_2.rq"),
         ("use_case_3", "ICS Advisory Threat Intelligence Exploration", ROOT / "src" / "sparql" / "queries" / "use_case_3.rq"),
+        ("use_case_4", "Top CVEs by CVSS Score", ROOT / "src" / "sparql" / "queries" / "use_case_4.rq"),
+        ("use_case_5", "CWE Coverage by CAPEC", ROOT / "src" / "sparql" / "queries" / "use_case_5.rq"),
+        ("use_case_6", "ATT&CK Technique Coverage", ROOT / "src" / "sparql" / "queries" / "use_case_6.rq"),
+        ("use_case_7", "Advisory Coverage by Product", ROOT / "src" / "sparql" / "queries" / "use_case_7.rq"),
+        ("use_case_8", "Missing Link Audit", ROOT / "src" / "sparql" / "queries" / "use_case_8.rq"),
+        ("use_case_9", "CVE to Affected CPE Products", ROOT / "src" / "sparql" / "queries" / "use_case_9.rq"),
+        ("use_case_10", "ICSA Coverage by Sector", ROOT / "src" / "sparql" / "queries" / "use_case_10.rq"),
+        ("use_case_11", "CAPEC Relationship Hub", ROOT / "src" / "sparql" / "queries" / "use_case_11.rq"),
+        ("use_case_12", "Entity Type Distribution", ROOT / "src" / "sparql" / "queries" / "use_case_12.rq"),
+        ("use_case_13", "High Severity Advisory Chain", ROOT / "src" / "sparql" / "queries" / "use_case_13.rq"),
     ]
 
     # Initialize Graph or SparqlClient

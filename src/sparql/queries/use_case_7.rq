@@ -1,0 +1,18 @@
+# Use Case 7: Advisory Coverage by Product
+# Identify the products that appear in the most ICS advisories.
+
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX cpe: <http://w3id.org/sepses/vocab/ref/cpe#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?vendorName ?productName (COUNT(DISTINCT ?advisory) AS ?advisoryCount) WHERE {
+  ?advisory a icsa:ICSA ;
+            icsa:hasVendor ?vendor ;
+            icsa:hasProduct ?product .
+
+  ?vendor cpe:vendorName ?vendorName .
+  ?product cpe:productName ?productName .
+}
+GROUP BY ?vendorName ?productName
+ORDER BY DESC(?advisoryCount) ?vendorName ?productName
+LIMIT 20

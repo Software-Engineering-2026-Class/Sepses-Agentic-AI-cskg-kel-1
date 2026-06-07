@@ -1,0 +1,16 @@
+# Use Case 10: ICSA Coverage by Sector
+# Summarize advisories, vendors, and products per critical infrastructure sector.
+
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?sectorId (COUNT(DISTINCT ?advisory) AS ?advisoryCount) (COUNT(DISTINCT ?vendor) AS ?vendorCount) (COUNT(DISTINCT ?product) AS ?productCount) WHERE {
+  ?advisory a icsa:ICSA ;
+            icsa:hasCriticalInfrastructureSector ?sector .
+  ?sector dcterms:identifier ?sectorId .
+  OPTIONAL { ?advisory icsa:hasVendor ?vendor . }
+  OPTIONAL { ?advisory icsa:hasProduct ?product . }
+}
+GROUP BY ?sectorId
+ORDER BY DESC(?advisoryCount) ?sectorId
+LIMIT 20
