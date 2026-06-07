@@ -1,0 +1,26 @@
+{
+  "totalResults": 1,
+  "results": [
+    {
+      "cpe": {
+        "deprecated": false,
+        "cpeName": "cpe:2.3:a:microsoft:ie:8.0.6001:beta:*:*:*:*:*:*",
+        "cpeNameId": "8242A5C9-1E5A-4841-B84A-98C02B90E385",
+        "lastModified": "2024-01-01T12:00:00.000",
+        "created": "2024-01-01T12:00:00.000",
+        "titles": [
+          {
+            "title": "Microsoft Internet Explorer 8.0 Beta",
+            "lang": "en"
+          }
+        ],
+        "refs": [
+          {
+            "ref": "https://microsoft.com",
+            "type": "Vendor"
+          }
+        ]
+      }
+    }
+  ]
+}

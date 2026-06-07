@@ -1,0 +1,45 @@
+@prefix cpe: <http://w3id.org/sepses/vocab/ref/cpe#> .
+@prefix cve: <http://w3id.org/sepses/vocab/ref/cve#> .
+@prefix cwe: <http://w3id.org/sepses/vocab/ref/cwe#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix icsa: <http://w3id.org/sepses/vocab/ref/icsa#> .
+
+<http://w3id.org/sepses/resource/icsa/ICSA-24-001-01> a icsa:ICSA ;
+    dcterms:identifier "ICSA-24-001-01" ;
+    dcterms:issued "2024-01-01" ;
+    dcterms:modified "2024-01-02" ;
+    dcterms:title "Example Industrial Advisory" ;
+    icsa:CVSSScore "8.8" ;
+    icsa:CVSSSeverity "HIGH" ;
+    icsa:hasCVE <http://w3id.org/sepses/resource/cve/CVE-2024-0001> ;
+    icsa:hasCWE <http://w3id.org/sepses/resource/cwe/CWE-89> ;
+    icsa:hasCompanyHeadquarter <http://w3id.org/sepses/resource/icsa/US> ;
+    icsa:hasCriticalInfrastructureSector <http://w3id.org/sepses/resource/icsa/Energy> ;
+    icsa:hasProduct <http://w3id.org/sepses/resource/cpe/product/example-plc> ;
+    icsa:hasProductDistribution <http://w3id.org/sepses/resource/icsa/Worldwide> ;
+    icsa:hasVendor <http://w3id.org/sepses/resource/cpe/vendor/example-vendor> ;
+    icsa:license "Public Domain" ;
+    icsa:reference "https://www.cisa.gov/ics/advisories/ICSA-24-001-01" ;
+    icsa:year "2024" .
+
+<http://w3id.org/sepses/resource/cpe/product/example-plc> a cpe:Product ;
+    dcterms:identifier "Example PLC" .
+
+<http://w3id.org/sepses/resource/cpe/vendor/example-vendor> a cpe:Vendor ;
+    dcterms:identifier "Example Vendor" .
+
+<http://w3id.org/sepses/resource/cve/CVE-2024-0001> a cve:CVE ;
+    dcterms:identifier "CVE-2024-0001" .
+
+<http://w3id.org/sepses/resource/cwe/CWE-89> a cwe:CWE ;
+    dcterms:identifier "CWE-89" .
+
+<http://w3id.org/sepses/resource/icsa/Energy> a icsa:CriticalInfrastructureSector ;
+    dcterms:identifier "Energy" .
+
+<http://w3id.org/sepses/resource/icsa/US> a icsa:CompanyHeadquarter ;
+    dcterms:identifier "US" .
+
+<http://w3id.org/sepses/resource/icsa/Worldwide> a icsa:ProductDistribution ;
+    dcterms:identifier "Worldwide" .
+
