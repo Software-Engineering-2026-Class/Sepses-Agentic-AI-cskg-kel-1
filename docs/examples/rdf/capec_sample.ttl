@@ -1,0 +1,38 @@
+@prefix attack: <http://w3id.org/sepses/vocab/ref/attack#> .
+@prefix capec: <http://w3id.org/sepses/vocab/ref/capec#> .
+@prefix cwe: <http://w3id.org/sepses/vocab/ref/cwe#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix ns1: <http://w3id.org/sepses/vocab/ref/common#> .
+
+<http://w3id.org/sepses/resource/capec/CAPEC-66/relationship/hasrelatedattackpattern-capec-7> a capec:RelatedAttackPattern ;
+    attack:hasSourceRef <http://w3id.org/sepses/resource/capec/CAPEC-66> ;
+    attack:hasTargetRef <http://w3id.org/sepses/resource/capec/CAPEC-7> ;
+    ns1:nature "ChildOf" ;
+    ns1:view_id "1000" .
+
+<http://w3id.org/sepses/resource/capec/CAPEC-66> a capec:CAPEC ;
+    dcterms:description "Inject SQL through untrusted input." ;
+    dcterms:identifier "CAPEC-66" ;
+    dcterms:title "SQL Injection" ;
+    capec:abstraction "Standard" ;
+    capec:hasRelatedAttackPattern <http://w3id.org/sepses/resource/capec/CAPEC-7> ;
+    capec:hasRelatedWeakness <http://w3id.org/sepses/resource/cwe/CWE-89> ;
+    capec:isContainedInCatalog <http://w3id.org/sepses/resource/capec/catalog/catalog-39-20240101> ;
+    capec:likelihoodOfAttack "High" ;
+    capec:mitigation "Use parameterized queries." ;
+    capec:status "Stable" ;
+    capec:structure "Simple" ;
+    capec:typicalSeverity "Very High" .
+
+<http://w3id.org/sepses/resource/capec/catalog/catalog-39-20240101> a capec:AttackPatternCatalog ;
+    dcterms:identifier "catalog-39-20240101" ;
+    dcterms:title "CAPEC" ;
+    capec:catalogDate "2024-01-01" ;
+    capec:catalogVersion "3.9" .
+
+<http://w3id.org/sepses/resource/cwe/CWE-89> a cwe:CWE ;
+    dcterms:identifier "CWE-89" .
+
+<http://w3id.org/sepses/resource/capec/CAPEC-7> a capec:CAPEC ;
+    dcterms:identifier "CAPEC-7" .
+
