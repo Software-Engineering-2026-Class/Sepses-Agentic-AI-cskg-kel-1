@@ -68,6 +68,9 @@ This project integrates multiple cybersecurity knowledge sources:
 - MITRE ATT&CK
 - ICSA Advisories
 
+Example raw inputs and their corresponding generated RDF/Turtle outputs are
+available in [`docs/examples/`](docs/examples/README.md).
+
 ---
 
 ## Technologies

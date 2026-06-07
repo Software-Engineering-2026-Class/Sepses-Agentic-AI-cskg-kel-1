@@ -1,0 +1,37 @@
+@prefix cpe: <http://w3id.org/sepses/vocab/ref/cpe#> .
+@prefix cve: <http://w3id.org/sepses/vocab/ref/cve#> .
+@prefix cvss: <http://w3id.org/sepses/vocab/ref/cvss#> .
+@prefix cwe: <http://w3id.org/sepses/vocab/ref/cwe#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://w3id.org/sepses/resource/cve/CVE-2024-0001> a cve:CVE ;
+    dcterms:description "An example remote code execution vulnerability." ;
+    dcterms:identifier "CVE-2024-0001" ;
+    dcterms:issued "2024-01-01T12:00:00"^^xsd:dateTime ;
+    dcterms:modified "2024-01-02T13:00:00"^^xsd:dateTime ;
+    cve:hasCPE <http://w3id.org/sepses/resource/cpe/cpe-2.3-a-example-software-1.0> ;
+    cve:hasCVSS3BaseMetric <http://w3id.org/sepses/resource/cvss/CVSS3BaseMetric/cvss3-CVE-2024-0001> ;
+    cve:hasCWE <http://w3id.org/sepses/resource/cwe/CWE-89> .
+
+<http://w3id.org/sepses/resource/cpe/cpe-2.3-a-example-software-1.0> a cpe:CPE ;
+    dcterms:identifier "cpe:2.3:a:example:software:1.0:*:*:*:*:*:*:*" .
+
+<http://w3id.org/sepses/resource/cvss/CVSS3BaseMetric/cvss3-CVE-2024-0001> a cvss:CVSS3BaseMetric ;
+    dcterms:identifier "cvss3-CVE-2024-0001" ;
+    cvss:attackComplexity "LOW" ;
+    cvss:attackVector "NETWORK" ;
+    cvss:availabilityImpact "HIGH" ;
+    cvss:baseScore 9.8 ;
+    cvss:baseSeverity "CRITICAL" ;
+    cvss:confidentialityImpact "HIGH" ;
+    cvss:integrityImpact "HIGH" ;
+    cvss:privilegesRequired "NONE" ;
+    cvss:scope "UNCHANGED" ;
+    cvss:userInteraction "NONE" ;
+    cvss:vectorString "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" ;
+    cvss:version "3.1" .
+
+<http://w3id.org/sepses/resource/cwe/CWE-89> a cwe:CWE ;
+    dcterms:identifier "CWE-89" .
+

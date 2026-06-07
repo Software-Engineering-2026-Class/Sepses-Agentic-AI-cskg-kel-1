@@ -1,0 +1,41 @@
+@prefix attack: <http://w3id.org/sepses/vocab/ref/attack#> .
+@prefix capec: <http://w3id.org/sepses/vocab/ref/capec#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix ns1: <http://w3id.org/sepses/vocab/ref/common#> .
+
+<http://w3id.org/sepses/resource/attack/mitigation/m1048/relationship/preventstechnique-t1190> a attack:Relationship ;
+    attack:hasSourceRef <http://w3id.org/sepses/resource/attack/mitigation/m1048> ;
+    attack:hasTargetRef <http://w3id.org/sepses/resource/attack/technique/t1190> ;
+    ns1:relationshiptype "mitigates" ;
+    ns1:stixrelationshipid "relationship--1" .
+
+<http://w3id.org/sepses/resource/attack/technique/t1190/relationship/hasmitigation-m1048> a attack:Relationship ;
+    attack:hasSourceRef <http://w3id.org/sepses/resource/attack/technique/t1190> ;
+    attack:hasTargetRef <http://w3id.org/sepses/resource/attack/mitigation/m1048> ;
+    ns1:relationshiptype "mitigates" ;
+    ns1:stixrelationshipid "relationship--1" .
+
+<http://w3id.org/sepses/resource/attack/tactic/ta0001> a attack:Tactic ;
+    dcterms:identifier "TA0001" ;
+    dcterms:title "Initial Access" ;
+    attack:shortname "initial-access" ;
+    attack:stixId "x-mitre-tactic--1" .
+
+<http://w3id.org/sepses/resource/capec/CAPEC-66> a capec:CAPEC ;
+    dcterms:identifier "CAPEC-66" .
+
+<http://w3id.org/sepses/resource/attack/mitigation/m1048> a attack:Mitigation ;
+    dcterms:identifier "M1048" ;
+    dcterms:title "Application Isolation and Sandboxing" ;
+    attack:preventsTechnique <http://w3id.org/sepses/resource/attack/technique/t1190> ;
+    attack:stixId "course-of-action--1" .
+
+<http://w3id.org/sepses/resource/attack/technique/t1190> a attack:Technique ;
+    dcterms:description "Exploit a public service." ;
+    dcterms:identifier "T1190" ;
+    dcterms:title "Exploit Public-Facing Application" ;
+    attack:accomplishesTactic <http://w3id.org/sepses/resource/attack/tactic/ta0001> ;
+    attack:hasCAPEC <http://w3id.org/sepses/resource/capec/CAPEC-66> ;
+    attack:hasMitigation <http://w3id.org/sepses/resource/attack/mitigation/m1048> ;
+    attack:stixId "attack-pattern--1" .
+

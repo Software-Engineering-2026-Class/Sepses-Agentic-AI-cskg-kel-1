@@ -1,0 +1,28 @@
+@prefix cpe: <http://w3id.org/sepses/vocab/ref/cpe#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<http://w3id.org/sepses/resource/cpe/cpe-2.3-a-microsoft-ie-8.0.6001-beta> a cpe:CPE ;
+    dcterms:identifier "cpe:2.3:a:microsoft:ie:8.0.6001:beta:*:*:*:*:*:*" ;
+    dcterms:title "Microsoft Internet Explorer 8.0 Beta" ;
+    cpe:cpe23 "cpe:2.3:a:microsoft:ie:8.0.6001:beta:*:*:*:*:*:*" ;
+    cpe:edition "*" ;
+    cpe:hasProduct <http://w3id.org/sepses/resource/cpe/product/microsoft-ie> ;
+    cpe:hasVendor <http://w3id.org/sepses/resource/cpe/vendor/microsoft> ;
+    cpe:language "*" ;
+    cpe:other "*" ;
+    cpe:part "a" ;
+    cpe:softwareEdition "*" ;
+    cpe:targetHardware "*" ;
+    cpe:targetSoftware "*" ;
+    cpe:update "beta" ;
+    cpe:version "8.0.6001" .
+
+<http://w3id.org/sepses/resource/cpe/product/microsoft-ie> a cpe:Product ;
+    dcterms:identifier "microsoft-ie" ;
+    cpe:hasVendor <http://w3id.org/sepses/resource/cpe/vendor/microsoft> ;
+    cpe:productName "ie" .
+
+<http://w3id.org/sepses/resource/cpe/vendor/microsoft> a cpe:Vendor ;
+    dcterms:identifier "microsoft" ;
+    cpe:vendorName "microsoft" .
+

@@ -1,0 +1,2 @@
+ICS-CERT_Number,ICS-CERT_Advisory_Title,Original_Release_Date,Last_Updated,Year,CVSS_Severity,Cumulative_CVSS,CVE_Number,CWE_Number,Critical_Infrastructure_Sector,Product,Vendor,Product_Distribution,Company_Headquarters,License
+ICSA-24-001-01,Example Industrial Advisory,2024-01-01,2024-01-02,2024,HIGH,8.8,CVE-2024-0001,CWE-89,Energy,Example PLC,Example Vendor,Worldwide,US,Public Domain
