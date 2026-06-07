@@ -1,0 +1,36 @@
+@prefix attack: <http://w3id.org/sepses/vocab/ref/attack#> .
+@prefix capec: <http://w3id.org/sepses/vocab/ref/capec#> .
+@prefix cwe: <http://w3id.org/sepses/vocab/ref/cwe#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix ns1: <http://w3id.org/sepses/vocab/ref/common#> .
+
+<http://w3id.org/sepses/resource/cwe/CWE-89/relationship/hasrelatedweakness-cwe-74> a attack:Relationship ;
+    attack:hasSourceRef <http://w3id.org/sepses/resource/cwe/CWE-89> ;
+    attack:hasTargetRef <http://w3id.org/sepses/resource/cwe/CWE-74> ;
+    ns1:nature "ChildOf" ;
+    ns1:view_id "1000" .
+
+<http://w3id.org/sepses/resource/capec/CAPEC-66> a capec:CAPEC ;
+    dcterms:identifier "CAPEC-66" .
+
+<http://w3id.org/sepses/resource/cwe/CWE-89> a cwe:CWE ;
+    dcterms:description "The software constructs an SQL command..." ;
+    dcterms:identifier "CWE-89" ;
+    dcterms:title "Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')" ;
+    cwe:abstraction "Class" ;
+    cwe:backgroundDetail "SQL injection is a major risk." ;
+    cwe:extendedDescription "This weakness commonly occurs in databases." ;
+    cwe:hasCAPEC <http://w3id.org/sepses/resource/capec/CAPEC-66> ;
+    cwe:hasRelatedWeakness <http://w3id.org/sepses/resource/cwe/CWE-74> ;
+    cwe:isContainedInCatalog <http://w3id.org/sepses/resource/cwe/catalog/catalog-414-20240229> ;
+    cwe:likelihoodOfExploit "High" ;
+    cwe:status "Incomplete" ;
+    cwe:structure "Simple" .
+
+<http://w3id.org/sepses/resource/cwe/catalog/catalog-414-20240229> a cwe:WeaknessCatalog ;
+    dcterms:identifier "catalog-414-20240229" ;
+    dcterms:title "CWE" .
+
+<http://w3id.org/sepses/resource/cwe/CWE-74> a cwe:CWE ;
+    dcterms:identifier "CWE-74" .
+

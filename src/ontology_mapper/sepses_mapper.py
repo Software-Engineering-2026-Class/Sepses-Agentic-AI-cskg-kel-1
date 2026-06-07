@@ -296,13 +296,17 @@ class SepsesOntologyMapper:
             "sourceRef": ATTACK.hasSourceRef,
             "targetRef": ATTACK.hasTargetRef,
         }
+        predicates_by_source = {
+            "capec": capec_rel,
+            "mitre_attack": attack_rel,
+            "icsa": icsa_rel,
+            "cve": cve_rel,
+            "cwe": cwe_rel,
+            "cpe": cpe_rel,
+            "generic": generic,
+        }
         return (
-            capec_rel.get(rel.predicate)
-            or attack_rel.get(rel.predicate)
-            or icsa_rel.get(rel.predicate)
-            or cve_rel.get(rel.predicate)
-            or cwe_rel.get(rel.predicate)
-            or cpe_rel.get(rel.predicate)
+            predicates_by_source.get(source, {}).get(rel.predicate)
             or generic.get(rel.predicate)
             or URIRef(f"http://w3id.org/sepses/vocab/ref/{source}#{rel.predicate}")
         )
