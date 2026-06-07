@@ -1,0 +1,15 @@
+# Use Case 5: CWE Coverage by CAPEC
+# Show which weaknesses are linked to the most CAPEC attack patterns.
+
+PREFIX cwe: <http://w3id.org/sepses/vocab/ref/cwe#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?cweId ?cweTitle (COUNT(DISTINCT ?capec) AS ?capecCount) WHERE {
+  ?cwe a cwe:CWE ;
+       dcterms:identifier ?cweId ;
+       dcterms:title ?cweTitle ;
+       cwe:hasCAPEC ?capec .
+}
+GROUP BY ?cweId ?cweTitle
+ORDER BY DESC(?capecCount) ?cweId
+LIMIT 20

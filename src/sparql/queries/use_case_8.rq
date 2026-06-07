@@ -1,0 +1,25 @@
+# Use Case 8: Missing Link Audit
+# Detect CVEs without CWE links and CWEs without CAPEC links.
+
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cwe: <http://w3id.org/sepses/vocab/ref/cwe#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?issueType ?entityId ?title WHERE {
+  {
+    ?cve a cve:CVE ;
+         dcterms:identifier ?entityId .
+    OPTIONAL { ?cve dcterms:title ?title . }
+    FILTER NOT EXISTS { ?cve cve:hasCWE ?cweLink }
+    BIND("CVE missing CWE" AS ?issueType)
+  }
+  UNION
+  {
+    ?cwe a cwe:CWE ;
+         dcterms:identifier ?entityId .
+    OPTIONAL { ?cwe dcterms:title ?title . }
+    FILTER NOT EXISTS { ?cwe cwe:hasCAPEC ?capecLink }
+    BIND("CWE missing CAPEC" AS ?issueType)
+  }
+}
+ORDER BY ?issueType ?entityId

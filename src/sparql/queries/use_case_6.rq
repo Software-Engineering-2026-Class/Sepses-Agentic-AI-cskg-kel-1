@@ -1,0 +1,20 @@
+# Use Case 6: ATT&CK Technique Coverage
+# Traverse ATT&CK techniques to tactics and CAPEC mappings.
+
+PREFIX attack: <http://w3id.org/sepses/vocab/ref/attack#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT DISTINCT ?techniqueId ?techniqueTitle ?tacticId ?tacticTitle ?capecId ?capecTitle WHERE {
+  ?technique a attack:Technique ;
+             dcterms:identifier ?techniqueId ;
+             dcterms:title ?techniqueTitle ;
+             attack:accomplishesTactic ?tactic ;
+             attack:hasCAPEC ?capec .
+
+  ?tactic dcterms:identifier ?tacticId ;
+          dcterms:title ?tacticTitle .
+
+  ?capec dcterms:identifier ?capecId ;
+         dcterms:title ?capecTitle .
+}
+ORDER BY ?techniqueId ?capecId
