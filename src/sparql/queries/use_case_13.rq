@@ -1,0 +1,34 @@
+# Use Case 13: High Severity Advisory Chain
+# Traverse advisory -> CVE -> CWE -> CAPEC and keep only high-severity CVEs.
+
+PREFIX icsa: <http://w3id.org/sepses/vocab/ref/icsa#>
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cwe: <http://w3id.org/sepses/vocab/ref/cwe#>
+PREFIX capec: <http://w3id.org/sepses/vocab/ref/capec#>
+PREFIX cvss: <http://w3id.org/sepses/vocab/ref/cvss#>
+PREFIX attack: <http://w3id.org/sepses/vocab/ref/attack#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT DISTINCT ?advisoryId ?cveId ?score ?cweId ?capecId ?techniqueId WHERE {
+  ?advisory a icsa:ICSA ;
+            dcterms:identifier ?advisoryId ;
+            icsa:hasCVE ?cve ;
+            icsa:hasCWE ?cwe .
+
+  ?cve dcterms:identifier ?cveId ;
+       cve:hasCVSS3BaseMetric ?metric .
+  ?metric cvss:baseScore ?score .
+  FILTER(?score >= 7.0)
+
+  ?cwe dcterms:identifier ?cweId ;
+       cwe:hasCAPEC ?capec .
+  ?capec dcterms:identifier ?capecId .
+
+  OPTIONAL {
+    ?technique a attack:Technique ;
+               attack:hasCAPEC ?capec ;
+               dcterms:identifier ?techniqueId .
+  }
+}
+ORDER BY DESC(?score) ?advisoryId ?cveId ?capecId ?techniqueId
+LIMIT 50

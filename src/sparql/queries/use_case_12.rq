@@ -1,0 +1,11 @@
+# Use Case 12: Entity Type Distribution
+# Count how many entities exist for each SEPSES class in the graph.
+
+SELECT ?typeName (COUNT(DISTINCT ?entity) AS ?count) WHERE {
+  ?entity a ?type .
+  FILTER(STRSTARTS(STR(?type), "http://w3id.org/sepses/vocab/ref/"))
+  BIND(STRAFTER(STR(?type), "#") AS ?typeName)
+}
+GROUP BY ?typeName
+ORDER BY DESC(?count) ?typeName
+LIMIT 50

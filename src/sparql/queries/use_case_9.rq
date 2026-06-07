@@ -1,0 +1,24 @@
+# Use Case 9: CVE to Affected CPE Products
+# List CVEs with their linked CPE vendor/product pairs and CVSS 3.x score.
+
+PREFIX cve: <http://w3id.org/sepses/vocab/ref/cve#>
+PREFIX cpe: <http://w3id.org/sepses/vocab/ref/cpe#>
+PREFIX cvss: <http://w3id.org/sepses/vocab/ref/cvss#>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+
+SELECT ?cveId ?vendorName ?productName ?score ?severity WHERE {
+  ?cve a cve:CVE ;
+       dcterms:identifier ?cveId ;
+       cve:hasCPE ?cpeNode ;
+       cve:hasCVSS3BaseMetric ?metric .
+
+  ?cpeNode cpe:hasVendor ?vendor ;
+           cpe:hasProduct ?product .
+  ?vendor cpe:vendorName ?vendorName .
+  ?product cpe:productName ?productName .
+
+  ?metric cvss:baseScore ?score .
+  OPTIONAL { ?metric cvss:baseSeverity ?severity . }
+}
+ORDER BY DESC(?score) ?cveId ?vendorName ?productName
+LIMIT 25
