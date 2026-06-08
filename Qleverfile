@@ -24,3 +24,7 @@ CACHE_MAX_SIZE    = 256M
 [runtime]
 SYSTEM = docker
 IMAGE  = docker.io/adfreiburg/qlever:latest
+
+[ui]
+PORT              = 7000
+UI_CONFIG         = default
