@@ -73,6 +73,59 @@ available in [`docs/examples/`](docs/examples/README.md).
 
 ---
 
+## Data Examples (Sekilas)
+
+Setiap datasource memiliki format input yang berbeda dan dipetakan ke RDF menggunakan ontologi SEPSES.
+Berikut sekilas contoh untuk dua datasource utama:
+
+### CVE (NVD JSON → RDF)
+
+**Input** (potongan NVD API 2.0):
+```json
+{
+  "id": "CVE-2023-44487",
+  "published": "2023-10-10T14:15:10.043",
+  "vulnStatus": "Analyzed",
+  "metrics": { "cvssMetricV31": [{ "cvssData": { "baseScore": 7.5, "baseSeverity": "HIGH" } }] },
+  "weaknesses": [{ "description": [{ "value": "CWE-400" }] }]
+}
+```
+
+**Output** (RDF/Turtle):
+```turtle
+<http://w3id.org/sepses/id/cve/CVE-2023-44487>
+    a cyber:CVE ;
+    cyber:cveId "CVE-2023-44487" ;
+    cyber:publishedDate "2023-10-10T14:15:10"^^xsd:dateTime ;
+    cyber:hasCVSS <.../cvss/CVE-2023-44487-v31> ;
+    cyber:hasCWE  <.../cwe/CWE-400> .
+```
+
+### MITRE ATT&CK (STIX JSON → RDF)
+
+**Input** (potongan STIX 2.0 bundle):
+```json
+{
+  "type": "attack-pattern",
+  "name": "Exploit Public-Facing Application",
+  "external_references": [{ "external_id": "T1190" }],
+  "kill_chain_phases": [{ "phase_name": "initial-access" }]
+}
+```
+
+**Output** (RDF/Turtle):
+```turtle
+<http://w3id.org/sepses/id/attack/T1190>
+    a cyber:Technique ;
+    attack:techniqueId "T1190" ;
+    cyber:name "Exploit Public-Facing Application" ;
+    attack:hasTactic <.../tactic/initial-access> .
+```
+
+**Lihat contoh lengkap untuk semua 6 datasource (~100 triple RDF) di: [docs/example-data.md](docs/example-data.md)**
+
+---
+
 ## Technologies
 
 - Python
@@ -159,7 +212,7 @@ SPARQL endpoint:
 http://localhost:7001/sparql
 ```
 
-QLever browser query interface:
+QLever browser query interface (custom):
 
 ```
 http://localhost:8000
@@ -177,6 +230,13 @@ Local interface without Docker:
 
 ```bash
 python -m src.sparql.qlever_interface --endpoint http://localhost:7001/sparql
+```
+
+QLever UI (antarmuka query interaktif resmi QLever):
+
+```
+http://localhost:7000
+
 ```
 
 To stop:

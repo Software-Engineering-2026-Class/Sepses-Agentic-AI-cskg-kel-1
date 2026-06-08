@@ -35,6 +35,8 @@ services:
       QLEVER_CACHE_MAX_SIZE: ${QLEVER_CACHE_MAX_SIZE:-256M}
       QLEVER_INDEX_OOM_RETRIES: ${QLEVER_INDEX_OOM_RETRIES:-3}
       QLEVER_MIN_INDEX_MEMORY_BYTES: ${QLEVER_MIN_INDEX_MEMORY_BYTES:-4294967296}
+    ports:
+      - "7001:7001"
     volumes:
       - .:/app
       - .:${PWD}
@@ -43,6 +45,7 @@ services:
     depends_on:
       - sepses-app
 
+  # Custom QLever Interface — antarmuka query Python buatan tim (port 8000)
   sepses-qlever-interface:
     build:
       context: .
@@ -61,5 +64,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: ["python", "-m", "src.sparql.qlever_interface", "--host", "0.0.0.0", "--port", "8000"]
+
+  # QLever UI — antarmuka web resmi QLever untuk query SPARQL secara interaktif
+  # Akses di: http://localhost:7000
+  # Backend SPARQL endpoint: http://localhost:7001/sparql
+  sepses-qlever-ui:
+    image: adfreiburg/qlever-ui:latest
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    environment:
+      # URL backend SPARQL — gunakan nama service Docker agar bisa diakses dalam internal network
+      QLEVER_API_ENDPOINT: "http://sepses-qlever:7001"
+      QLEVER_UI_PORT: "7000"
     depends_on:
       - sepses-qlever

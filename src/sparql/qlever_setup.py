@@ -19,7 +19,9 @@ from loguru import logger
 
 # Konstanta
 QLEVER_DOCKER_IMAGE = "docker.io/adfreiburg/qlever"
+QLEVER_UI_DOCKER_IMAGE = "docker.io/adfreiburg/qlever-ui"
 DEFAULT_PORT = 7001
+DEFAULT_UI_PORT = 7000  # Port untuk QLever UI (antarmuka web query SPARQL)
 DEFAULT_DATASET_NAME = "sepses-cskg"
 RDF_OUTPUT_DIR = Path("data/rdf_output")
 DEFAULT_STXXL_MEMORY = os.getenv("QLEVER_STXXL_MEMORY", "AUTO")
@@ -191,6 +193,7 @@ def generate_qleverfile(
     dataset_name: str = DEFAULT_DATASET_NAME,
     rdf_dir: Path = RDF_OUTPUT_DIR,
     port: int = DEFAULT_PORT,
+    ui_port: int = DEFAULT_UI_PORT,
     output_path: Path = Path("Qleverfile"),
 ) -> Path:
     """
@@ -320,6 +323,10 @@ CACHE_MAX_SIZE    = {cache_max_size}
 [runtime]
 SYSTEM = docker
 IMAGE  = {QLEVER_DOCKER_IMAGE}:latest
+
+[ui]
+PORT              = {ui_port}
+UI_CONFIG         = default
 """
 
     output_path.write_text(qleverfile_content, encoding="utf-8")
@@ -455,6 +462,7 @@ def _cleanup_qlever_server_containers() -> None:
 def setup_qlever(
     skip_install: bool = False,
     port: int = DEFAULT_PORT,
+    ui_port: int = DEFAULT_UI_PORT,
     dataset_name: str = DEFAULT_DATASET_NAME,
 ) -> None:
     """
@@ -467,7 +475,9 @@ def setup_qlever(
     skip_install : bool
         Lewati instalasi qlever CLI jika sudah terinstall.
     port : int
-        Port untuk SPARQL endpoint.
+        Port untuk SPARQL endpoint backend (default: 7001).
+    ui_port : int
+        Port untuk QLever UI / antarmuka web query (default: 7000).
     dataset_name : str
         Nama dataset / index Qlever.
     """
@@ -493,13 +503,15 @@ def setup_qlever(
     generate_qleverfile(
         dataset_name=dataset_name,
         port=port,
+        ui_port=ui_port,
     )
 
     logger.info(
         "\nNext steps setelah RDF output tersedia:\n"
         "  1. python -m src.sparql.qlever_setup --build-index\n"
         "  2. python -m src.sparql.qlever_setup --start\n"
-        f"  3. Buka endpoint SPARQL di http://localhost:{port}/sparql"
+        f"  3. Buka QLever UI di http://localhost:{ui_port}  (antarmuka query SPARQL)\n"
+        f"  4. Atau akses SPARQL endpoint langsung di http://localhost:{port}/sparql"
     )
 
 
