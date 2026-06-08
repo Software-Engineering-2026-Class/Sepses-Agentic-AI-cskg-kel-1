@@ -159,6 +159,26 @@ SPARQL endpoint:
 http://localhost:7001/sparql
 ```
 
+QLever browser query interface:
+
+```
+http://localhost:8000
+```
+
+The interface posts SPARQL queries to the configured QLever endpoint and renders
+result bindings in a table. By default, the Dockerized interface proxies to
+`http://host.docker.internal:7001/sparql`; override it when needed:
+
+```bash
+QLEVER_ENDPOINT_URL=http://localhost:7001/sparql docker compose up -d --build sepses-qlever-interface
+```
+
+Local interface without Docker:
+
+```bash
+python -m src.sparql.qlever_interface --endpoint http://localhost:7001/sparql
+```
+
 To stop:
 
 ```bash
