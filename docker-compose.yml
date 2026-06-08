@@ -42,3 +42,24 @@ services:
     command: ["/bin/bash", "/app/scripts/docker-entrypoint-qlever.sh"]
     depends_on:
       - sepses-app
+
+  sepses-qlever-interface:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: ${PWD}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      QLEVER_ENDPOINT_URL: ${QLEVER_ENDPOINT_URL:-http://host.docker.internal:7001/sparql}
+      QLEVER_INTERFACE_HOST: 0.0.0.0
+      QLEVER_INTERFACE_PORT: 8000
+    ports:
+      - "${QLEVER_INTERFACE_PORT:-8000}:8000"
+    volumes:
+      - .:/app
+      - .:${PWD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command: ["python", "-m", "src.sparql.qlever_interface", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      - sepses-qlever
