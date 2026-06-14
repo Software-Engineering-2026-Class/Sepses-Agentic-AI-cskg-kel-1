@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from src.parser.cve_parser import CVEParser
 
@@ -20,6 +21,7 @@ def test_parse_cve_json():
     assert "remote code execution" in cve.description
     assert cve.properties["issued"] == "2024-01-01T12:00:00.000"
     assert cve.properties["modified"] == "2024-01-02T13:00:00.000"
+    assert cve.properties["references"] == []
 
     # Check relationships
     relationships = cve.relationships
@@ -51,3 +53,22 @@ def test_parse_cve_json():
     assert cvss3.properties["vectorString"] == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
     assert cvss3.properties["baseScore"] == 9.8
     assert cvss3.properties["baseSeverity"] == "CRITICAL"
+
+
+def test_parse_cve_references(tmp_path):
+    source = json.loads((FIXTURES / "cve_sample.json").read_text(encoding="utf-8"))
+    source["results"][0]["cve"]["references"] = [
+        {"url": "https://example.com/advisory"},
+        {"url": "https://example.com/patch"},
+        {"source": "missing-url"},
+    ]
+    fixture = tmp_path / "cve_with_references.json"
+    fixture.write_text(json.dumps(source), encoding="utf-8")
+
+    entities = CVEParser().parse(fixture)
+    cve = next(e for e in entities if e.entity_type == "CVE")
+
+    assert cve.properties["references"] == [
+        "https://example.com/advisory",
+        "https://example.com/patch",
+    ]

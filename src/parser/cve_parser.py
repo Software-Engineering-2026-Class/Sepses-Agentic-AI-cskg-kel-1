@@ -75,6 +75,12 @@ class CVEParser(SourceParser):
             published = cpe_data.get("published")
             last_modified = cpe_data.get("lastModified")
 
+            references = [
+                ref.get("url")
+                for ref in cpe_data.get("references", [])
+                if isinstance(ref, dict) and ref.get("url")
+            ]
+
             cve_entity = ParsedEntity(
                 source="cve",
                 entity_type="CVE",
@@ -83,13 +89,9 @@ class CVEParser(SourceParser):
                 properties={
                     "issued": published,
                     "modified": last_modified,
+                    "references": references,
                 }
             )
-
-            # References
-            for ref in cpe_data.get("references", []):
-                # We can store reference details if needed. For now, keep it simple
-                pass
 
             # Weaknesses (CWE)
             for weakness in cpe_data.get("weaknesses", []):
