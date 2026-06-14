@@ -35,8 +35,6 @@ services:
       QLEVER_CACHE_MAX_SIZE: ${QLEVER_CACHE_MAX_SIZE:-256M}
       QLEVER_INDEX_OOM_RETRIES: ${QLEVER_INDEX_OOM_RETRIES:-3}
       QLEVER_MIN_INDEX_MEMORY_BYTES: ${QLEVER_MIN_INDEX_MEMORY_BYTES:-4294967296}
-    ports:
-      - "7001:7001"
     volumes:
       - .:/app
       - .:${PWD}
@@ -74,8 +72,11 @@ services:
     ports:
       - "7000:7000"
     environment:
-      # URL backend SPARQL — gunakan nama service Docker agar bisa diakses dalam internal network
-      QLEVER_API_ENDPOINT: "http://sepses-qlever:7001"
+      # QLever server dijalankan oleh bootstrap service melalui Docker socket
+      # dan dipublikasikan di host port 7001.
+      QLEVER_API_ENDPOINT: "http://host.docker.internal:7001"
       QLEVER_UI_PORT: "7000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - sepses-qlever

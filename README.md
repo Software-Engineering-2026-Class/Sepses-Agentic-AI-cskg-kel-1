@@ -205,9 +205,9 @@ python -m src.evaluation.run_evaluation
 python -m src.sparql.rdf_loader
 ```
 
-### Dockerized Environment
+## Quick Start with Docker
 
-Run the full project stack (runtime + QLever bootstrap service) with:
+Run the full project stack with:
 
 ```bash
 docker compose up -d --build
@@ -218,7 +218,19 @@ Services:
 - `sepses-app`: keeps the project image alive and is used to run scripts/commands.
 - `sepses-qlever`: waits for `data/rdf_output/*.ttl` and, by default, prepares QLever only.
   Auto-build is disabled by default in compose; edit `docker-compose.yml` (`QLEVER_AUTOBUILD`) to `1`
-  only if you want automatic loader execution when TTL files appear.
+  only if you want automatic loader execution when TTL files appear. When an
+  index is available, this bootstrap service launches the QLever server on host
+  port `7001` through the mounted Docker socket.
+- `sepses-qlever-interface`: custom browser interface for submitting SPARQL queries.
+- `sepses-qlever-ui`: official QLever web UI.
+
+Port mappings:
+
+| Service | Host URL | Purpose |
+|---|---|---|
+| QLever server launched by `sepses-qlever` | `http://localhost:7001/sparql` | SPARQL endpoint. |
+| `sepses-qlever-interface` | `http://localhost:8000` | Custom query interface. |
+| `sepses-qlever-ui` | `http://localhost:7000` | Official QLever UI. |
 
 ```bash
 docker compose exec sepses-app python scripts/fetch_all_sources.py
