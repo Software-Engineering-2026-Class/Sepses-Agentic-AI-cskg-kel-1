@@ -6,3 +6,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .DS_Store
+sepses-cskg.index*
+sepses-cskg.internal.index*
+sepses-cskg.meta-data.json
+sepses-cskg.server-log.txt
+sepses-cskg.settings.json
+sepses-cskg.vocabulary.*
