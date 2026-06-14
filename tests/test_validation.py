@@ -11,16 +11,13 @@ Covers:
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 from rdflib import Graph, Literal, RDF, URIRef
 from rdflib.namespace import DCTERMS
 
 from src.validation.kg_validator import KGValidator
 from src.agents.validation_agent import ValidationAgent
-from src.ontology_mapper.namespaces import CAPEC, CVE, CWE, ATTACK, ICSA
+from src.ontology_mapper.namespaces import CAPEC, CVE
 
 
 # ---------------------------------------------------------------------------
@@ -160,10 +157,6 @@ class TestValidationAgentReports:
         # Point reports to tmp_path to avoid polluting real data/
         monkeypatch.chdir(tmp_path)
         # Patch report dir inside the agent
-        import src.agents.validation_agent as va_mod
-        import src.validation.kg_validator as vk_mod
-
-        orig_resolve_va = Path.resolve
 
         def mock_parents(self, *args):
             # Return tmp_path as the "project root" for report writing

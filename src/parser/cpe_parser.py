@@ -12,7 +12,7 @@ from loguru import logger
 
 from .base import SourceParser
 from .models import ParsedEntity
-from src.ontology_mapper.identifiers import clean_text, slugify
+from src.ontology_mapper.identifiers import slugify
 
 
 class CPEParser(SourceParser):

@@ -7,7 +7,6 @@ start, stop, health check, dan status monitoring.
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional
 import requests
 from loguru import logger
 
@@ -154,7 +153,8 @@ class EndpointManager:
 
 # CLI
 if __name__ == "__main__":
-    import argparse, json
+    import argparse
+    import json
 
     parser = argparse.ArgumentParser(
         description="Kelola lifecycle SPARQL endpoint Qlever"

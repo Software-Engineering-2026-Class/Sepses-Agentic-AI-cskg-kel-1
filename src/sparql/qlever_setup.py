@@ -336,6 +336,20 @@ UI_CONFIG         = default
 
 # Kontrol Endpoint (index / start / stop)
 
+def qlever_index_exists(
+    dataset_name: str = DEFAULT_DATASET_NAME,
+    base_dir: Path = Path("."),
+) -> bool:
+    """Return True when the minimum QLever index artifacts are present."""
+    required_files = [
+        f"{dataset_name}.index.spo",
+        f"{dataset_name}.index.pos",
+        f"{dataset_name}.index.ops",
+        f"{dataset_name}.meta-data.json",
+    ]
+    return all((base_dir / name).is_file() for name in required_files)
+
+
 def build_index(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     """
     Jalankan `qlever index` untuk membangun index dari RDF files.
@@ -361,6 +375,13 @@ def start_endpoint(qleverfile_path: Path = Path("Qleverfile")) -> bool:
     Jalankan `qlever start` untuk menghidupkan SPARQL endpoint.
     Endpoint akan tersedia di http://localhost:{DEFAULT_PORT}/sparql
     """
+    if not qlever_index_exists(base_dir=qleverfile_path.parent):
+        logger.error(
+            "QLever index belum ditemukan. Jalankan "
+            "`python -m src.sparql.qlever_setup --build-index` terlebih dahulu."
+        )
+        return False
+
     logger.info(f"Menjalankan SPARQL endpoint di port {DEFAULT_PORT}...")
     _cleanup_qlever_server_containers()
     try:

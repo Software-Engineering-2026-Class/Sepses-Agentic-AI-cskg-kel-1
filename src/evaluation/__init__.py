@@ -8,7 +8,6 @@ __all__ = [
     "KGEvaluator",
     "KGStats",
     "generate_all",
-    "report_generator",
-    "run_evaluation"
+    "generate_report",
+    "run",
 ]
-

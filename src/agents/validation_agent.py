@@ -11,7 +11,6 @@ Outputs:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -103,11 +102,11 @@ class ValidationAgent:
             if check.get("error_count", 0):
                 lines.append(f"- **Errors:** {check['error_count']}")
             if check.get("missing"):
-                lines.append(f"- **Missing fields (first 5):**")
+                lines.append("- **Missing fields (first 5):**")
                 for m in check["missing"][:5]:
                     lines.append(f"  - `{m['entity']}` missing `{m['missing_field']}`")
             if check.get("invalid"):
-                lines.append(f"- **Invalid formats (first 5):**")
+                lines.append("- **Invalid formats (first 5):**")
                 for m in check["invalid"][:5]:
                     lines.append(f"  - `{m['entity']}` has invalid identifier `{m['identifier']}` (expected: `{m['expected_pattern']}`)")
             if check.get("duplicate_count"):

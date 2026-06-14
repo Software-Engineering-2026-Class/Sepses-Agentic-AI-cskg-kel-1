@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 from loguru import logger
-from SPARQLWrapper import SPARQLWrapper, JSON, POST, TURTLE
+from SPARQLWrapper import SPARQLWrapper, JSON
 import requests
 
 

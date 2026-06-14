@@ -9,6 +9,7 @@ AUTO_START_RAW="${QLEVER_AUTO_START:-1}"
 MIN_INDEX_MEMORY_BYTES="${QLEVER_MIN_INDEX_MEMORY_BYTES:-4294967296}"
 LOADER_LOG="${QLEVER_LOADER_LOG:-/tmp/qlever-loader.log}"
 LOADER_EXIT_CODE_FILE="${QLEVER_LOADER_EXIT_CODE_FILE:-/tmp/qlever-loader.exit}"
+DATASET_NAME="${QLEVER_DATASET_NAME:-sepses-cskg}"
 LOADER_PID=""
 
 if [[ ! "${BOOT_TIMEOUT}" =~ ^-?[0-9]+$ ]] || [ "${BOOT_TIMEOUT}" -lt 0 ]; then
@@ -96,6 +97,24 @@ start_background_loader() {
   echo "[qlever-stack] RDF loader berjalan di background (PID=${LOADER_PID}). Log: ${LOADER_LOG}"
 }
 
+has_qlever_index() {
+  local required_files=(
+    "${DATASET_NAME}.index.spo"
+    "${DATASET_NAME}.index.pos"
+    "${DATASET_NAME}.index.ops"
+    "${DATASET_NAME}.meta-data.json"
+  )
+
+  local file
+  for file in "${required_files[@]}"; do
+    if [ ! -s "${file}" ]; then
+      return 1
+    fi
+  done
+
+  return 0
+}
+
 check_background_loader() {
   if [ -z "${LOADER_PID}" ]; then
     return
@@ -158,12 +177,19 @@ while true; do
     if [ "${AUTOBUILD}" != "1" ]; then
       echo "[qlever-stack] Auto-build dinonaktifkan (QLEVER_AUTOBUILD=${AUTOBUILD})."
       if [ "${AUTO_START}" = "1" ]; then
-        echo "[qlever-stack] Mencoba start endpoint secara otomatis."
-        if python -m src.sparql.qlever_setup --start; then
-          echo "[qlever-stack] SPARQL endpoint berhasil dimulai."
+        if has_qlever_index; then
+          echo "[qlever-stack] Existing QLever index detected. Mencoba start endpoint secara otomatis."
+          if python -m src.sparql.qlever_setup --start; then
+            echo "[qlever-stack] SPARQL endpoint berhasil dimulai."
+          else
+            echo "[qlever-stack] Endpoint belum bisa start."
+            echo "[qlever-stack] Jalankan manual setelah selesai:"
+            echo "  docker compose exec sepses-qlever python -m src.sparql.qlever_setup --build-index"
+            echo "  docker compose exec sepses-qlever python -m src.sparql.qlever_setup --start"
+          fi
         else
-          echo "[qlever-stack] Endpoint belum bisa start (kemungkinan index belum dibangun)."
-          echo "[qlever-stack] Jalankan manual setelah selesai:"
+          echo "[qlever-stack] Auto-start di-skip karena index QLever belum dibangun."
+          echo "[qlever-stack] Jalankan manual untuk membuat index dan start endpoint:"
           echo "  docker compose exec sepses-qlever python -m src.sparql.qlever_setup --build-index"
           echo "  docker compose exec sepses-qlever python -m src.sparql.qlever_setup --start"
         fi

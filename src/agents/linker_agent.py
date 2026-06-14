@@ -18,7 +18,7 @@ from typing import Any
 from rdflib import Graph
 from loguru import logger
 
-from src.parser.models import ParsedEntity, Relationship
+from src.parser.models import ParsedEntity
 from src.tools.rdf_builder import RDFBuilder
 
 

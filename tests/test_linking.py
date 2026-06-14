@@ -15,15 +15,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from rdflib import URIRef
 
-from src.parser.models import ParsedEntity, Relationship
+from src.parser.models import ParsedEntity
 from src.parser.capec_parser import CAPECParser
 from src.parser.mitre_attack_parser import MitreAttackParser
 from src.parser.icsa_parser import ICSAParser
 from src.agents.linker_agent import LinkerAgent
-from src.ontology_mapper.namespaces import CAPEC, ATTACK, ICSA, CVE, CWE, CPE
+from src.ontology_mapper.namespaces import CAPEC, ATTACK, ICSA
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -168,7 +167,7 @@ class TestLinkingReport:
     def test_report_has_required_fields(self):
         entities = CAPECParser().parse(FIXTURES / "capec_sample.xml")
         linker = LinkerAgent()
-        graph = linker.run(entities)
+        linker.run(entities)
 
         # Report should exist in data/reports/
         report_path = Path(__file__).resolve().parents[1] / "data" / "reports" / "linking_report.json"

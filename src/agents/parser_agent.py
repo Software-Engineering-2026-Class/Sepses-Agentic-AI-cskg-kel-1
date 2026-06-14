@@ -7,9 +7,7 @@ ParsedEntity model aligned with SEPSES/ICS-SEC ontology.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
 from loguru import logger
 
 from src.parser.models import ParsedEntity

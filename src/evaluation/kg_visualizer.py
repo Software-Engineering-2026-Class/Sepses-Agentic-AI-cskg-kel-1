@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 import seaborn as sns
 from loguru import logger
 
@@ -118,7 +117,7 @@ def plot_source_distribution(stats: KGStats, out: Path = OUTPUT_DIR) -> Path:
         at.set_fontsize(8)
     ax.legend(
         wedges,
-        [f"{l} ({v:,})" for l, v in zip(labels, sizes)],
+        [f"{label} ({value:,})" for label, value in zip(labels, sizes)],
         loc="lower right", fontsize=9,
     )
     ax.set_title("Distribusi Entitas per Sumber Data", fontweight="bold", pad=14)

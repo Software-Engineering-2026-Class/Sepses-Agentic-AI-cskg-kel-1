@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.ingestion import (
-    BaseFetcher,
     NVDFetcher,
     CWEFetcher,
     CAPECFetcher,

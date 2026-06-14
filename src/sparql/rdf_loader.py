@@ -8,7 +8,6 @@ bukan incremental SPARQL UPDATE.
 """
 
 import subprocess
-import shutil
 import os
 import sys
 from pathlib import Path

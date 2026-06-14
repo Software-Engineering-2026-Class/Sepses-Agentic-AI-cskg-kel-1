@@ -12,7 +12,7 @@ from loguru import logger
 
 from .base import SourceParser
 from .models import ParsedEntity
-from src.ontology_mapper.identifiers import clean_text, normalize_cwe_id
+from src.ontology_mapper.identifiers import normalize_cwe_id
 
 
 class CVEParser(SourceParser):

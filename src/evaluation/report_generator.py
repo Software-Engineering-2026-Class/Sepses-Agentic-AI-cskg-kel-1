@@ -48,7 +48,7 @@ def generate_report(
     # Header
     a("# Laporan Evaluasi Knowledge Graph SEPSES CSKG")
     a("")
-    a(f"> **Dibuat otomatis oleh** `src/evaluation/report_generator.py`  ")
+    a("> **Dibuat otomatis oleh** `src/evaluation/report_generator.py`  ")
     a(f"> **Tanggal**: {now}  ")
     a("")
     a("---")
@@ -184,9 +184,9 @@ def generate_report(
         (stats.cwe_with_capec, stats.cwe_count),
         (stats.icsa_with_cve,  stats.icsa_count),
     ]
-    valid_covs = [(l, t) for l, t in link_covs if t > 0]
+    valid_covs = [(linked, total) for linked, total in link_covs if total > 0]
     if valid_covs:
-        avg_cov = sum(l / t * 100 for l, t in valid_covs) / len(valid_covs)
+        avg_cov = sum(linked / total * 100 for linked, total in valid_covs) / len(valid_covs)
 
     a(f"- KG berhasil memuat **{stats.total_triples:,} triple** dari **{total_src}/7 sumber data**.")
     a(f"- Rata-rata coverage linking: **{avg_cov:.1f}%**.")

@@ -5,7 +5,6 @@ Loads RDF/Turtle files into QLever or Virtuoso SPARQL endpoints.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Optional
 import requests

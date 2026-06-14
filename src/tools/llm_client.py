@@ -8,11 +8,9 @@ the pipeline remains deterministic and functional without an LLM.
 from __future__ import annotations
 
 import os
-from typing import Any
 from loguru import logger
 
 try:
-    import openai
     from openai import OpenAI
     HAS_OPENAI = True
 except ImportError:

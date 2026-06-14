@@ -6,7 +6,7 @@ DESCRIPTION       = "sepses-cskg"
 FORMAT            = ttl
 
 [index]
-INPUT_FILES      = data/rdf_output/sepses_cskg.ttl
+INPUT_FILES       = data/rdf_output/sepses_cskg.ttl
 CAT_INPUT_FILES   = cat data/rdf_output/sepses_cskg.ttl
 STXXL_MEMORY      = 3G
 PARSER_BUFFER_SIZE = 32M

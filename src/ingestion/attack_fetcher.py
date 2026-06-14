@@ -7,7 +7,6 @@ Sources (official MITRE CTI GitHub, STIX 2.1 format):
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from loguru import logger

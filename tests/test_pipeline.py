@@ -1,9 +1,7 @@
 from pathlib import Path
 
-from rdflib import URIRef
 
 from src.agentic_pipeline.run_pipeline import run_pipeline
-from src.ontology_mapper.namespaces import ATTACK, CAPEC, ICSA
 
 
 FIXTURES = Path(__file__).parent / "fixtures"

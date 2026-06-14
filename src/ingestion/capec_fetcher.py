@@ -5,7 +5,6 @@ Source: https://capec.mitre.org/data/xml/capec_latest.xml
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
