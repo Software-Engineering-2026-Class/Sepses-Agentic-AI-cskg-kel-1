@@ -19,6 +19,14 @@ data/reports/*
 !data/rdf_output/.gitkeep
 !data/reports/.gitkeep
 
+# Generated QLever index artifacts
+/sepses-cskg.index*
+/sepses-cskg.internal.index*
+/sepses-cskg.meta-data.json
+/sepses-cskg.server-log.txt
+/sepses-cskg.settings.json
+/sepses-cskg.vocabulary.*
+
 # Metadata sidecars from fetchers
 data/raw/**/*.meta.json
 .env
