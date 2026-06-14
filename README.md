@@ -357,6 +357,27 @@ See the dedicated pipeline documentation for complete installation, configuratio
 execution commands, expected outputs, and known limitations:
 
 - [Pipeline Usage Guide](docs/pipeline-usage.md)
+
+## Use Cases
+
+The repository includes 13 SPARQL use-case queries in `src/sparql/queries/`.
+Detailed input/output documentation for representative security analysis
+queries is available in [`use-cases/README.md`](use-cases/README.md).
+
+Examples:
+
+| Use case | Input | Output |
+|---|---|---|
+| Vulnerability assessment | ICSA-to-CVE/product query (`use_case_1.rq`) | CVE ID, product name, CVSS score, severity. |
+| Weakness exploration | CVE-to-CWE/CAPEC query (`use_case_2.rq`) | CVE ID, CWE ID, CAPEC ID, CAPEC title. |
+| ICS advisory context | Advisory-to-CVE/CWE/CAPEC/ATT&CK query (`use_case_3.rq`) | Advisory ID, CVE, CWE, CAPEC, technique ID/title. |
+
+Run all use cases locally:
+
+```bash
+python scripts/query_use_cases.py --file data/rdf_output/sepses_cskg.ttl --output-dir data/reports
+```
+
 ## Expected Output
 
 After successful pipeline execution, the following outputs are generated:
