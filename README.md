@@ -167,6 +167,32 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+
+### Configuration
+
+Copy the tracked template and fill in only the values needed for your local
+machine:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Required | Default | Purpose |
+|---|---:|---|---|
+| `NVD_API_KEY` | No | empty | Optional NVD API key for higher request limits. |
+| `QLEVER_BOOT_TIMEOUT_SECONDS` | No | `600` | Maximum time the QLever bootstrap waits for Turtle files. |
+| `QLEVER_CHECK_INTERVAL_SECONDS` | No | `10` | Poll interval while waiting for RDF output. |
+| `QLEVER_AUTOBUILD` | No | `0` | Set to `1` to build the QLever index automatically when TTL files exist. |
+| `QLEVER_AUTO_START` | No | `1` | Try to start the QLever endpoint automatically when an index exists. |
+| `QLEVER_CONTAINER_MEMORY` | No | `16g` | Memory limit for the QLever service. |
+| `QLEVER_NUM_THREADS` | No | `1` | QLever indexing/query worker thread count. |
+| `QLEVER_MEMORY_FOR_QUERIES` | No | `768M` | QLever memory budget for query execution. |
+| `QLEVER_CACHE_MAX_SIZE` | No | `256M` | QLever cache size. |
+| `QLEVER_ENDPOINT_URL` | No | `http://host.docker.internal:7001/sparql` | Endpoint used by the custom browser query interface. |
+| `QLEVER_INTERFACE_HOST` | No | `0.0.0.0` | Bind host for the custom query interface. |
+| `QLEVER_INTERFACE_PORT` | No | `8000` | Host/container port for the custom query interface. |
+| `QLEVER_QUERY_TIMEOUT_SECONDS` | No | `60` | HTTP timeout for browser-interface SPARQL queries. |
+
 ## Demo
 
 ```bash

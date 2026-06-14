@@ -23,5 +23,6 @@ data/reports/*
 data/raw/**/*.meta.json
 .env
 .env.*
+!.env.example
 venv/
 env/
