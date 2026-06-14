@@ -1,3 +1,0 @@
-2026-06-14 14:35:21.456 - INFO: [1mQLever server b802870, compiled on Wed Jun  3 00:15:24 UTC 2026 using git hash b802870[22m
-2026-06-14 14:35:21.458 - INFO: Initializing server ...
-2026-06-14 14:35:21.459 - ERROR: Could not open file "sepses-cskg.meta-data.json" for reading. Possible causes: The file does not exist or the permissions are insufficient. The absolute path is "/index/sepses-cskg.meta-data.json".
