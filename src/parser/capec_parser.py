@@ -50,6 +50,23 @@ def _all_text(element: ET.Element, path: list[str]) -> list[str]:
     return [t for t in (clean_text("".join(node.itertext())) for node in current_nodes) if t]
 
 
+def _description_or_fallback(attack_pattern: ET.Element, capec_id: str) -> str:
+    description = _first_text(attack_pattern, ["Description"])
+    if description:
+        return description
+
+    title = clean_text(attack_pattern.attrib.get("Name"))
+    if title:
+        return (
+            f"CAPEC record for {title}. "
+            "The upstream CAPEC XML did not provide a description."
+        )
+    return (
+        f"CAPEC record {capec_id}. "
+        "The upstream CAPEC XML did not provide a description."
+    )
+
+
 class CAPECParser(SourceParser):
     source_name = "capec"
 
@@ -95,7 +112,7 @@ class CAPECParser(SourceParser):
                 entity_type="CAPEC",
                 external_id=capec_id,
                 title=attack_pattern.attrib.get("Name"),
-                description=_first_text(attack_pattern, ["Description"]),
+                description=_description_or_fallback(attack_pattern, capec_id),
                 properties={
                     "abstraction": attack_pattern.attrib.get("Abstraction"),
                     "structure": attack_pattern.attrib.get("Structure"),
