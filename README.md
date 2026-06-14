@@ -347,11 +347,9 @@ data/reports/fetch_report.json
 Each downloaded file also has a `.meta.json` sidecar with provenance
 (timestamp, source URL, file size, SHA-256 checksum).
 
----
-
-```
-
-You may pass a file or a directory to each source argument.
+You may pass a file or a directory to each source argument when using the parser
+or pipeline commands documented in
+[`docs/pipeline-usage.md`](docs/pipeline-usage.md).
 
 ## Pipeline Usage Guide (Issue #11)
 
@@ -359,7 +357,6 @@ See the dedicated pipeline documentation for complete installation, configuratio
 execution commands, expected outputs, and known limitations:
 
 - [Pipeline Usage Guide](docs/pipeline-usage.md)
- ```
 ## Expected Output
 
 After successful pipeline execution, the following outputs are generated:
