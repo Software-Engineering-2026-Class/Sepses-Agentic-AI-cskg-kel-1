@@ -16,7 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.evaluation.kg_evaluator import KGStats
-from src.evaluation.kg_visualizer import generate_all_visualizations
+from src.evaluation.kg_visualizer import generate_all
 
 
 def run_count(g: Graph, query: str) -> int:
@@ -101,7 +101,7 @@ def main():
     chart_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Generating evaluation charts...")
     try:
-        generate_all_visualizations(stats, output_dir=chart_dir)
+        generate_all(stats, out=chart_dir)
         logger.success("Evaluation charts generated successfully.")
     except Exception as e:
         logger.error(f"Failed to generate charts: {e}")
