@@ -294,9 +294,9 @@ src/
 │   ├── capec_parser.py
 │   ├── mitre_attack_parser.py
 │   ├── icsa_parser.py
-│   ├── cve_parser.py                # TODO: Phase 2
-│   ├── cwe_parser.py                # TODO: Phase 3
-│   └── cpe_parser.py                # TODO: Phase 4
+│   ├── cve_parser.py
+│   ├── cwe_parser.py
+│   └── cpe_parser.py
 │
 ├── ontology_mapper/                 # SEPSES mapping (used by LinkerAgent + rdf_builder)
 │   ├── namespaces.py
@@ -304,7 +304,7 @@ src/
 │   └── sepses_mapper.py
 │
 ├── validation/                      # Validation logic (used by ValidationAgent)
-│   └── shacl_validator.py           # TODO: Phase 5
+│   └── kg_validator.py              # Structural and relationship checks
 │
 └── agentic_pipeline/                # Pipeline runner (orchestrator)
     ├── __init__.py
