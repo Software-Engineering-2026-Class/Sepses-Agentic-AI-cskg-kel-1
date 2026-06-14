@@ -137,6 +137,24 @@ Berikut sekilas contoh untuk dua datasource utama:
 
 ---
 
+## System Overview
+
+The repository is organized around a reproducible CSKG pipeline:
+
+```text
+Cybersecurity sources
+  -> ingestion agents in src/ingestion/
+  -> parser agents in src/parser/
+  -> ontology mapping in src/ontology_mapper/
+  -> RDF/Turtle generation in src/agentic_pipeline/
+  -> validation in src/validation/
+  -> SPARQL loading and querying in src/sparql/
+  -> evaluation reports and charts in src/evaluation/
+```
+
+The detailed architecture document is available at
+[`docs/Agentic_pipeline_architecture.md`](docs/Agentic_pipeline_architecture.md).
+
 ## Development Setup
 
 ### Clone Repository
