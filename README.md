@@ -137,6 +137,24 @@ Berikut sekilas contoh untuk dua datasource utama:
 
 ---
 
+## System Overview
+
+The repository is organized around a reproducible CSKG pipeline:
+
+```text
+Cybersecurity sources
+  -> ingestion agents in src/ingestion/
+  -> parser agents in src/parser/
+  -> ontology mapping in src/ontology_mapper/
+  -> RDF/Turtle generation in src/agentic_pipeline/
+  -> validation in src/validation/
+  -> SPARQL loading and querying in src/sparql/
+  -> evaluation reports and charts in src/evaluation/
+```
+
+The detailed architecture document is available at
+[`docs/Agentic_pipeline_architecture.md`](docs/Agentic_pipeline_architecture.md).
+
 ## Development Setup
 
 ### Clone Repository
@@ -167,6 +185,32 @@ source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+
+### Configuration
+
+Copy the tracked template and fill in only the values needed for your local
+machine:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Required | Default | Purpose |
+|---|---:|---|---|
+| `NVD_API_KEY` | No | empty | Optional NVD API key for higher request limits. |
+| `QLEVER_BOOT_TIMEOUT_SECONDS` | No | `600` | Maximum time the QLever bootstrap waits for Turtle files. |
+| `QLEVER_CHECK_INTERVAL_SECONDS` | No | `10` | Poll interval while waiting for RDF output. |
+| `QLEVER_AUTOBUILD` | No | `0` | Set to `1` to build the QLever index automatically when TTL files exist. |
+| `QLEVER_AUTO_START` | No | `1` | Try to start the QLever endpoint automatically when an index exists. |
+| `QLEVER_CONTAINER_MEMORY` | No | `16g` | Memory limit for the QLever service. |
+| `QLEVER_NUM_THREADS` | No | `1` | QLever indexing/query worker thread count. |
+| `QLEVER_MEMORY_FOR_QUERIES` | No | `768M` | QLever memory budget for query execution. |
+| `QLEVER_CACHE_MAX_SIZE` | No | `256M` | QLever cache size. |
+| `QLEVER_ENDPOINT_URL` | No | `http://host.docker.internal:7001/sparql` | Endpoint used by the custom browser query interface. |
+| `QLEVER_INTERFACE_HOST` | No | `0.0.0.0` | Bind host for the custom query interface. |
+| `QLEVER_INTERFACE_PORT` | No | `8000` | Host/container port for the custom query interface. |
+| `QLEVER_QUERY_TIMEOUT_SECONDS` | No | `60` | HTTP timeout for browser-interface SPARQL queries. |
+
 ## Demo
 
 ```bash
@@ -179,9 +223,9 @@ python -m src.evaluation.run_evaluation
 python -m src.sparql.rdf_loader
 ```
 
-### Dockerized Environment
+## Quick Start with Docker
 
-Run the full project stack (runtime + QLever bootstrap service) with:
+Run the full project stack with:
 
 ```bash
 docker compose up -d --build
@@ -192,7 +236,19 @@ Services:
 - `sepses-app`: keeps the project image alive and is used to run scripts/commands.
 - `sepses-qlever`: waits for `data/rdf_output/*.ttl` and, by default, prepares QLever only.
   Auto-build is disabled by default in compose; edit `docker-compose.yml` (`QLEVER_AUTOBUILD`) to `1`
-  only if you want automatic loader execution when TTL files appear.
+  only if you want automatic loader execution when TTL files appear. When an
+  index is available, this bootstrap service launches the QLever server on host
+  port `7001` through the mounted Docker socket.
+- `sepses-qlever-interface`: custom browser interface for submitting SPARQL queries.
+- `sepses-qlever-ui`: official QLever web UI.
+
+Port mappings:
+
+| Service | Host URL | Purpose |
+|---|---|---|
+| QLever server launched by `sepses-qlever` | `http://localhost:7001/sparql` | SPARQL endpoint. |
+| `sepses-qlever-interface` | `http://localhost:8000` | Custom query interface. |
+| `sepses-qlever-ui` | `http://localhost:7000` | Official QLever UI. |
 
 ```bash
 docker compose exec sepses-app python scripts/fetch_all_sources.py
@@ -291,11 +347,9 @@ data/reports/fetch_report.json
 Each downloaded file also has a `.meta.json` sidecar with provenance
 (timestamp, source URL, file size, SHA-256 checksum).
 
----
-
-```
-
-You may pass a file or a directory to each source argument.
+You may pass a file or a directory to each source argument when using the parser
+or pipeline commands documented in
+[`docs/pipeline-usage.md`](docs/pipeline-usage.md).
 
 ## Pipeline Usage Guide (Issue #11)
 
@@ -303,7 +357,27 @@ See the dedicated pipeline documentation for complete installation, configuratio
 execution commands, expected outputs, and known limitations:
 
 - [Pipeline Usage Guide](docs/pipeline-usage.md)
- ```
+
+## Use Cases
+
+The repository includes 13 SPARQL use-case queries in `src/sparql/queries/`.
+Detailed input/output documentation for representative security analysis
+queries is available in [`use-cases/README.md`](use-cases/README.md).
+
+Examples:
+
+| Use case | Input | Output |
+|---|---|---|
+| Vulnerability assessment | ICSA-to-CVE/product query (`use_case_1.rq`) | CVE ID, product name, CVSS score, severity. |
+| Weakness exploration | CVE-to-CWE/CAPEC query (`use_case_2.rq`) | CVE ID, CWE ID, CAPEC ID, CAPEC title. |
+| ICS advisory context | Advisory-to-CVE/CWE/CAPEC/ATT&CK query (`use_case_3.rq`) | Advisory ID, CVE, CWE, CAPEC, technique ID/title. |
+
+Run all use cases locally:
+
+```bash
+python scripts/query_use_cases.py --file data/rdf_output/sepses_cskg.ttl --output-dir data/reports
+```
+
 ## Expected Output
 
 After successful pipeline execution, the following outputs are generated:
